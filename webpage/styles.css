@@ -1,0 +1,165 @@
+body {
+    font-family: Bahnschrift, sans-serif;
+    background-color: #ffffff;
+    color: #2d3142;
+}
+
+.title {
+    text-align: center;
+    font-weight: bold;
+    background-color: #bfc0c0;
+    border-radius: 1vw;
+    padding: 1vh;
+    width: max-content;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.section-head {
+    background-color: #4f5d75;
+    color: #ffffff;
+    width: auto;
+    border-radius: 1vw;
+    padding: 1vh;
+    text-align: center;
+}
+
+div.sections {
+    background-color: #bfc0c0;
+    border-radius: 1vw;
+    display: flex;
+    padding: 1vh;
+
+    height: 82vh;
+}
+
+div.section {
+    background-color: #2d3142;
+    color: #ffffff;
+    width: max-content;
+    height: calc(100% - 3vh - 1vw);
+    border-radius: 1vw;
+    padding: 1vw;
+    margin: 0.5vh;
+}
+
+table {
+    border-collapse: collapse;
+    background-color: #ffffff;
+    color: #2d3142;
+    text-align: center;
+    vertical-align: center;
+    margin-top: 0.5vh;
+    margin-bottom: 0.5vh;
+    height: 20px;
+}
+
+table.timetable {
+    width: 20vw;
+}
+
+table.song-list {
+    width: 20vw;
+    margin: 0;
+}
+
+#song-list-table-div {
+    width: max-content;
+    overflow-y: scroll;
+    height: 50vh;
+    background-color: #ffffff;
+    margin-top: 0.5vw;
+    margin-bottom: 0.5vh;
+}
+
+table.fixed {
+    table-layout: fixed;
+}
+
+tr.song-list-row {
+
+}
+
+tr.song-list-row:hover {
+    background-color: #bfc0c0;
+    cursor: pointer;
+}
+
+tr.song-list-row.active {
+    background-color: #9fa0a0;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+th, td {
+    border-width: 1px;
+    border-color: #4f5d75;
+    border-style: solid;
+    width: auto;
+    padding: 0.1vh;
+}
+
+th {
+    background-color: #4f5d75;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+div.button-holder {
+    width: 100%;
+    display: flex;
+}
+
+#disable-selected {
+    margin-right: auto;
+}
+
+#delete-selected {
+    margin-left: auto;
+}
+
+input.submit, label.button, button {
+    background-color: #bfc0c0;
+    color: #2d3142;
+    text-align: center;
+    padding: 1vh;
+    border-radius: 1vh;
+    border-style: none;
+    width: max-content;
+    font-size: medium;
+    font-family: Bahnschrift, sans-serif;
+    margin-top: 0.5vh;
+    margin-bottom: 0.5vh;
+}
+
+.dangerous {
+    background-color: #ef8354;
+    color: #ffffff;
+}
+
+input.submit:hover, label.button:hover, button:hover {
+    background-color: #ef8354;
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.dangerous:hover {
+    background-color: #bfc0c0;
+    color: #2d3142;
+}
+
+input.submit:active, label.button:active, button:active {
+    background-color: #c76d46;
+    color: #ffffff;
+}
+
+.dangerous:active {
+    background-color: #9fa0a0;
+    color: #2d3142;
+}
+
+input.submit:disabled, label.button:disabled, button:disabled {
+    background-color: #bfc0c0;
+    color: #2d3142;
+    cursor: not-allowed;
+}

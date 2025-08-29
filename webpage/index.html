@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Musiq Admin Interface</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="prefetch" href="data/songs.csv" as="fetch">
+    <link rel="prefetch" href="data/timetable.csv" as="fetch">
+    <link rel="prefetch" href="data/breaks.csv" as="fetch">
+</head>
+<body>
+    <h1 class="title">Musiq Admin Interface</h1>
+    <hr class="title-break">
+    <div class="sections">
+        <div class="timetable section">
+            <h2 class="section-head">Timetable</h2>
+            <form class="timetable" action="/set-timetable" method="post" id="timetable">
+                <table class="timetable-days timetable fixed">
+                    <tr>
+                        <th>Break</th>
+                        <th>Mon</th>
+                        <th>Tue</th>
+                        <th>Wed</th>
+                        <th>Thu</th>
+                        <th>Fri</th>
+                    </tr>
+                    <tr>
+                        <td>0.</td>
+                        <td>
+                            <input type="checkbox" id="mon0" name="mon0">
+                            <label for="mon0"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="tue0" name="tue0">
+                            <label for="tue0"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="wed0" name="wed0">
+                            <label for="wed0"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="thu0" name="thu0">
+                            <label for="thu0"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="fri0" name="fri0">
+                            <label for="fri0"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>1.</td>
+                        <td>
+                            <input type="checkbox" id="mon1" name="mon1">
+                            <label for="mon1"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="tue1" name="tue1">
+                            <label for="tue1"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="wed1" name="wed1">
+                            <label for="wed1"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="thu1" name="thu1">
+                            <label for="thu1"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="fri1" name="fri1">
+                            <label for="fri1"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>2.</td>
+                        <td>
+                            <input type="checkbox" id="mon2" name="mon2">
+                            <label for="mon2"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="tue2" name="tue2">
+                            <label for="tue2"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="wed2" name="wed2">
+                            <label for="wed2"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="thu2" name="thu2">
+                            <label for="thu2"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="fri2" name="fri2">
+                            <label for="fri2"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>3.</td>
+                        <td>
+                            <input type="checkbox" id="mon3" name="mon3">
+                            <label for="mon3"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="tue3" name="tue3">
+                            <label for="tue3"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="wed3" name="wed3">
+                            <label for="wed3"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="thu3" name="thu3">
+                            <label for="thu3"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="fri3" name="fri3">
+                            <label for="fri3"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>4.</td>
+                        <td>
+                            <input type="checkbox" id="mon4" name="mon4">
+                            <label for="mon4"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="tue4" name="tue4">
+                            <label for="tue4"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="wed4" name="wed4">
+                            <label for="wed4"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="thu4" name="thu4">
+                            <label for="thu4"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="fri4" name="fri4">
+                            <label for="fri4"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>5.</td>
+                        <td>
+                            <input type="checkbox" id="mon5" name="mon5">
+                            <label for="mon5"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="tue5" name="tue5">
+                            <label for="tue5"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="wed5" name="wed5">
+                            <label for="wed5"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="thu5" name="thu5">
+                            <label for="thu5"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="fri5" name="fri5">
+                            <label for="fri5"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>6.</td>
+                        <td>
+                            <input type="checkbox" id="mon6" name="mon6">
+                            <label for="mon6"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="tue6" name="tue6">
+                            <label for="tue6"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="wed6" name="wed6">
+                            <label for="wed6"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="thu6" name="thu6">
+                            <label for="thu6"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="fri6" name="fri6">
+                            <label for="fri6"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>7.</td>
+                        <td>
+                            <input type="checkbox" id="mon7" name="mon7">
+                            <label for="mon7"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="tue7" name="tue7">
+                            <label for="tue7"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="wed7" name="wed7">
+                            <label for="wed7"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="thu7" name="thu7">
+                            <label for="thu7"></label>
+                        </td>
+                        <td>
+                            <input type="checkbox" id="fri7" name="fri7">
+                            <label for="fri7"></label>
+                        </td>
+                    </tr>
+                </table>
+                <table class="timetable-breaks timetable">
+                    <tr>
+                        <th>Break</th>
+                        <th>Start</th>
+                        <th>End</th>
+                    </tr>
+                    <tr>
+                        <td>0.</td>
+                        <td>
+                            <input type="time" step="300" id="break-start0" name="break-start0" min="03:00" max="21:00" required>
+                            <label for="break-start0"></label>
+                        </td>
+                        <td>
+                            <input type="time" step="300" id="break-end0" name="break-end0" min="03:00" max="21:00" required>
+                            <label for="break-end0"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>1.</td>
+                        <td>
+                            <input type="time" step="300" id="break-start1" name="break-start1" min="03:00" max="21:00" required>
+                            <label for="break-start1"></label>
+                        </td>
+                        <td>
+                            <input type="time" step="300" id="break-end1" name="break-end1" min="03:00" max="21:00" required>
+                            <label for="break-end1"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>2.</td>
+                        <td>
+                            <input type="time" step="300" id="break-start2" name="break-start2" min="03:00" max="21:00" required>
+                            <label for="break-start2"></label>
+                        </td>
+                        <td>
+                            <input type="time" step="300" id="break-end2" name="break-end2" min="03:00" max="21:00" required>
+                            <label for="break-end2"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>3.</td>
+                        <td>
+                            <input type="time" step="300" id="break-start3" name="break-start3" min="03:00" max="21:00" required>
+                            <label for="break-start3"></label>
+                        </td>
+                        <td>
+                            <input type="time" step="300" id="break-end3" name="break-end3" min="03:00" max="21:00" required>
+                            <label for="break-end3"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>4.</td>
+                        <td>
+                            <input type="time" step="300" id="break-start4" name="break-start4" min="03:00" max="21:00" required>
+                            <label for="break-start4"></label>
+                        </td>
+                        <td>
+                            <input type="time" step="300" id="break-end4" name="break-end4" min="03:00" max="21:00" required>
+                            <label for="break-end4"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>5.</td>
+                        <td>
+                            <input type="time" step="300" id="break-start5" name="break-start5" min="03:00" max="21:00" required>
+                            <label for="break-start5"></label>
+                        </td>
+                        <td>
+                            <input type="time" step="300" id="break-end5" name="break-end5" min="03:00" max="21:00" required>
+                            <label for="break-end5"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>6.</td>
+                        <td>
+                            <input type="time" step="300" id="break-start6" name="break-start6" min="03:00" max="21:00" required>
+                            <label for="break-start6"></label>
+                        </td>
+                        <td>
+                            <input type="time" step="300" id="break-end6" name="break-end6" min="03:00" max="21:00" required>
+                            <label for="break-end6"></label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>7.</td>
+                        <td>
+                            <input type="time" step="300" id="break-start7" name="break-start7" value="{break-start7-value}" min="03:00" max="21:00" required>
+                            <label for="break-start7"></label>
+                        </td>
+                        <td>
+                            <input type="time" step="300" id="break-end7" name="break-end7" value="{break-end7-value}" min="03:00" max="21:00" required>
+                            <label for="break-end7"></label>
+                        </td>
+                    </tr>
+                </table>
+                <input class="submit" type="submit" value="Save Timetable" id="save-timetable">
+            </form>
+        </div>
+        <div class="songs section">
+            <h2 class="section-head">Songs</h2>
+            <div class="song-list" id="song-list-table-div"><table class="song-list songs" id="song-list-table">
+                <tr>
+                    <th>Filename</th>
+                    <th>Enabled</th>
+                </tr>
+            </table></div>
+            <div class="button-holder">
+                <button id="disable-selected">Disable selected</button>
+                <button id="delete-selected" class="dangerous">Delete selected</button>
+            </div>
+            <form class="add-song" action="/add-songs" method="post" id="add-song-form">
+                <input class="songs" type="file" name="songs" id="songs" accept="audio/*" multiple hidden>
+                <label for="songs" class="button">Select song to upload</label>
+                <input type="submit" class="submit" value="Upload 0 song" id="song-submit" disabled>
+            </form>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
