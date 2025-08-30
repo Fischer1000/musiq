@@ -1,9 +1,12 @@
 #[macro_export]
 macro_rules! or_continue {
     ($e:expr) => {
+        or_continue!($e, ())
+    };
+    ($e:expr, $c:stmt) => {
         match $e {
             Some(x) => x,
-            None => continue
+            None => { $c; continue }
         }
     };
 }

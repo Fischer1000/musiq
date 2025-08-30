@@ -59,7 +59,7 @@ table.timetable {
 }
 
 table.song-list {
-    width: 20vw;
+    width: 30vw;
     margin: 0;
 }
 
@@ -74,10 +74,6 @@ table.song-list {
 
 table.fixed {
     table-layout: fixed;
-}
-
-tr.song-list-row {
-
 }
 
 tr.song-list-row:hover {
@@ -111,6 +107,11 @@ div.button-holder {
 }
 
 #disable-selected {
+    margin-right: auto;
+}
+
+#enable-selected {
+    margin-left: auto;
     margin-right: auto;
 }
 

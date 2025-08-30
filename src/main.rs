@@ -1,22 +1,19 @@
-/* Phase 1
-use std::ffi::OsStr;
+use std::io::Write;
 use std::path::Path;
-*/
 
-use musiq::{or_return, print_iter};
-use musiq::songs::Song;
-// Phase 1: use musiq::database::FileDatabase;
-use musiq::config::Configs;
-use musiq::webserver::{handle_connection, listen};
+use musiq::{database, embedded_files};
+use musiq::songs;
 
-// static SUPPORTED_EXTENSIONS: &[&str] = &["mp4"];
-static SUPPORTED_EXTENSIONS: &[&str] = &["png", "svg"];
+use musiq::or_return;
+use musiq::webserver;
 
-fn predicate(s: &Song) -> bool {
+static SUPPORTED_EXTENSIONS: &[&str] = &["mp3"];
+
+fn has_allowed_extension(s: &songs::Song) -> bool {
     SUPPORTED_EXTENSIONS.contains(
         &or_return!(
             or_return!(
-                s.filename.to_str(),
+                s.filename().to_str(),
                 false
             ).rsplit_once('.'),
             false
@@ -25,29 +22,19 @@ fn predicate(s: &Song) -> bool {
 }
 
 fn main() {
-    // drop(remove_file(".\\testdir\\pfp.png"));
+    let mut database = match database::SongDatabase::from_directory_filtered(
+        Path::new(musiq::SONG_FILES_DIR),
+        has_allowed_extension
+    ) {
+        Ok(database) => database,
+        Err(e) => match e {
+            database::DatabaseError::DirectoryCannotBeRead => {
+                println!("The directory of the songs cannot be read. Terminating...");
+                return;
+            }
+            _ => unreachable!()
+        }
+    };
 
-    /* Phase 1
-    let mut database: FileDatabase<Song> = FileDatabase::from_directory_filtered(Path::new(".\\testdir"), predicate).unwrap();
-
-    print_iter!(database.inner().iter());
-
-    let new_file = Path::new(".\\testdir-2\\pfp.png");
-
-    database.add_file(new_file).realize(&mut database).unwrap();
-
-    print_iter!(database.inner().iter());
-
-    database.remove_entry(OsStr::new("pfp.png")).realize(&mut database).unwrap();
-
-    print_iter!(database.inner().iter());
-    */
-
-    /*
-    let configs = Configs::read_from_file(".\\testdir\\db.musiq").unwrap();
-
-    println!("{:}", configs.timetable().display());
-    */
-
-    listen("localhost:7878", handle_connection).unwrap();
+    webserver::listen("localhost:7878", webserver::handle_request, database).unwrap();
 }

@@ -3,13 +3,15 @@
 #![deny(keyword_idents, unsafe_op_in_unsafe_fn)]
 #![forbid(deprecated_safe_2024, non_ascii_idents, unused_crate_dependencies)]
 
+pub static SONG_FILES_DIR: &str = ".\\songs\\";
 
-// pub mod csv;
 pub mod songs;
 mod macros;
 pub mod database;
 pub mod config;
 pub mod webserver;
+pub mod embedded_files;
+pub mod csv;
 
 #[cfg(test)]
 mod tests {

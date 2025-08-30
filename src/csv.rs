@@ -1,71 +1,160 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader, Error as IoError, Write};
+pub const DEFAULT_SEPARATOR: char = ',';
 
-pub struct CSVFile {
-    file: File,
-    has_header: bool,
+/// A single value that can be represented in CSV
+#[derive(Debug)]
+pub enum CsvObject {
+    /// A string value
+    String(Box<str>),
+    /// An integer value
+    Int(i64),
+    /// A floating-point value
+    Float(f64),
+    /// A boolean value
+    Bool(bool),
+    /// No value
+    Null
 }
 
-impl<const N: usize> CSVFile {
-    /// Creates a new `CSVFile` object from a given path by opening the file there.\
-    /// # Note:
-    /// This function does not check for whether the file's extension is `csv` and assumes the file
-    /// does not contain a header specifying field names.
-    pub fn new(path: &str) -> Result<CSVFile, IoError> {
-        let file = File::open(path)?;
+impl CsvObject {
+    /// Converts a CSV-encoded `&str` into a vector of the vectors of the values.\
+    /// Each vector stores one row from the original data.\
+    /// This function assumes that strings are marked with double-quotes (`"`) at both ends.
+    /// # Note
+    /// While usual implementations of CSV parsing don't split strings in the middle if they contain
+    /// the separator character, this one does, because this use case is not needed for this project.
+    pub fn from_str(s: &str, sep: char) -> Vec<Vec<CsvObject>> {
+        let mut result: Vec<Vec<CsvObject>> = Vec::new();
+        let mut line_buf: Vec<CsvObject> = Vec::new();
 
-        Ok(CSVFile { file, has_header: false })
+        '_lines: for line in s.lines() {
+            '_values: for val in line.split(sep) {
+                let val = val.trim();
+                line_buf.push( match val {
+                    "" | "\"" => CsvObject::Null,
+                    "false" => CsvObject::Bool(false),
+                    "true" => CsvObject::Bool(true),
+                    _ => 'nontrivial: {
+                        if let Some(remainder) = val.strip_prefix("\"") {
+                            if let Some(middle) = remainder.strip_suffix("\"") {
+                                break 'nontrivial CsvObject::String(middle.into());
+                            }
+                        }
+                        if let Ok(int) = val.parse::<i64>() {
+                            break 'nontrivial CsvObject::Int(int);
+                        }
+                        if let Ok(float) = val.parse::<f64>() {
+                            break 'nontrivial CsvObject::Float(float);
+                        }
+                        CsvObject::Null
+                    }
+                } );
+            }
+            result.push(line_buf);
+            line_buf = Vec::new();
+        }
+
+        result
     }
 
-    /// Informs the object that the opened file has a header specifying field names.
-    pub fn set_header(&mut self) {
-        self.has_header = true;
+    /// Serializes a vector of the vectors of CSV values into a single string.\
+    /// The separator is applied between values with no whitespace around it.\
+    /// The rows are separated by the CRLF sequence (`\r\n`).
+    pub fn serialize(values: Vec<Vec<CsvObject>>, sep: char) -> String {
+        let mut result = String::new();
+
+        for line in values {
+            for (i, val) in line.iter().enumerate() {
+                result.push_str( match val {
+                    CsvObject::Null => String::new(),
+                    CsvObject::String(s) => format!("\"{s}\""),
+                    CsvObject::Int(i) => format!("{i}"),
+                    CsvObject::Float(f) => format!("{f}"),
+                    CsvObject::Bool(b) => format!("{b}"),
+                }.as_str() );
+                if i < line.len() - 1 {
+                    result.push(sep);
+                }
+            }
+            result.push_str("\r\n");
+        }
+
+        result
     }
 
-    /// Informs the object that the opened file does not have a header specifying field names.
-    pub fn unset_header(&mut self) {
-        self.has_header = false;
+    fn repr(&self) -> String {
+        match self {
+            CsvObject::Null => "null".to_string(),
+            CsvObject::String(s) => format!("\"{}\"", s),
+            CsvObject::Int(i) => i.to_string(),
+            CsvObject::Float(f) => f.to_string(),
+            CsvObject::Bool(b) => b.to_string(),
+        }
     }
 
-    /// Iterates over the lines of the underlying file and parses them into a single value
-    /// by calling the specified function on each line read.
-    ///
-    /// # Usage
-    /// ```
-    /// # use musiq::csv::CSVFile;
-    /// # compile_error!("This test should not be runned under no circumstances,
-    /// # because of its possible use of the compiling machine's files.");
-    /// // The file is expected to have two values in each row
-    ///
-    /// fn to_ints(line: &str) -> Option<(i32, i32)> {
-    ///     let (first, second) = {
-    ///         let mut i = line.split(',');
-    ///         (i.next()?, i.next()?)
-    ///     };
-    ///     Some((
-    ///         first.parse().ok()?,
-    ///         second.parse().ok()?
-    ///     ))
-    /// }
-    ///
-    /// let my_csv_file = CSVFile::new("foo.csv").unwrap();
-    ///
-    /// let collected = my_csv_file.collect_values(to_ints);
-    /// ```
-    pub fn collect_values<T>(mut self, f: fn(&str) -> Option<T>) -> Vec<T> {
-        let mut lines = BufReader::new(self.file)
-            .lines()
-            .skip(usize::from_bool(self.has_header)); // Skip the first line if there is a header
-
-        lines.filter_map(|v| f(v.ok()?.as_str())).collect::<Vec<T>>()
+    pub fn as_string(&self) -> Option<&str> {
+        match self {
+            CsvObject::String(s) => Some(s.as_ref()),
+            _ => None
+        }
     }
+}
 
-    pub fn add_entry(&mut self, entry: &str) -> std::io::Result<()> {
-        self.file.write_all(entry.as_bytes())
+/// Implements `From<T>` for `CsvObject` variant `String`.
+macro_rules! impl_from_str {
+    ($t:ty) => {
+        impl From<$t> for CsvObject {
+            fn from(s: $t) -> Self {
+                CsvObject::String(s.into())
+            }
+        }
+    };
+}
+/// Implements `From<T>` for `CsvObject` variant `Int`.
+macro_rules! impl_from_int {
+    ($t:ty) => {
+        impl From<$t> for CsvObject {
+            fn from(i: $t) -> Self {
+                CsvObject::Int(i as i64)
+            }
+        }
+    };
+}
+/// Implements `From<T>` for `CsvObject` variant `Float`.
+macro_rules! impl_from_float {
+    ($t:ty) => {
+        impl From<$t> for CsvObject {
+            fn from(f: $t) -> Self {
+                CsvObject::Float(f as f64)
+            }
+        }
+    };
+}
+
+// String implementations
+impl_from_str!(String);
+impl_from_str!(&str);
+impl_from_str!(Box<str>);
+
+// Int implementations
+impl_from_int!(i8);
+impl_from_int!(i16);
+impl_from_int!(i32);
+impl_from_int!(i64);
+
+// Float implementations
+impl_from_float!(f32);
+impl_from_float!(f64);
+
+// Bool implementation
+impl From<bool> for CsvObject {
+    fn from(b: bool) -> Self {
+        CsvObject::Bool(b)
     }
+}
 
-    pub fn from_entries<const N: usize>(filename: &str, entries: Vec<&[&str; N]>) -> Result<CSVFile, ()> {
-        todo!();
-        let file = File::create(filename.into());
+// Null implementation
+impl From<()> for CsvObject {
+    fn from(_: ()) -> Self {
+        CsvObject::Null
     }
 }

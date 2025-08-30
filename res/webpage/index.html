@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Musiq Admin Interface</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="prefetch" href="data/songs.csv" as="fetch">
-    <link rel="prefetch" href="data/timetable.csv" as="fetch">
-    <link rel="prefetch" href="data/breaks.csv" as="fetch">
+    <link rel="stylesheet" href="files/styles.css">
+    <link rel="icon" href="files/favicon.svg">
+    <!-- link rel="prefetch" href="data/songs.csv" as="fetch" -->
+    <!-- link rel="prefetch" href="data/timetable.csv" as="fetch" -->
+    <!-- link rel="prefetch" href="data/breaks.csv" as="fetch" -->
 </head>
 <body>
     <h1 class="title">Musiq Admin Interface</h1>
@@ -14,7 +15,7 @@
     <div class="sections">
         <div class="timetable section">
             <h2 class="section-head">Timetable</h2>
-            <form class="timetable" action="/set-timetable" method="post" id="timetable">
+            <form class="timetable" action="/api/set-timetable" method="post" id="timetable">
                 <table class="timetable-days timetable fixed">
                     <tr>
                         <th>Break</th>
@@ -47,7 +48,6 @@
                             <label for="fri0"></label>
                         </td>
                     </tr>
-
                     <tr>
                         <td>1.</td>
                         <td>
@@ -309,11 +309,11 @@
                     <tr>
                         <td>7.</td>
                         <td>
-                            <input type="time" step="300" id="break-start7" name="break-start7" value="{break-start7-value}" min="03:00" max="21:00" required>
+                            <input type="time" step="300" id="break-start7" name="break-start7" min="03:00" max="21:00" required>
                             <label for="break-start7"></label>
                         </td>
                         <td>
-                            <input type="time" step="300" id="break-end7" name="break-end7" value="{break-end7-value}" min="03:00" max="21:00" required>
+                            <input type="time" step="300" id="break-end7" name="break-end7" min="03:00" max="21:00" required>
                             <label for="break-end7"></label>
                         </td>
                     </tr>
@@ -331,15 +331,16 @@
             </table></div>
             <div class="button-holder">
                 <button id="disable-selected">Disable selected</button>
+                <button id="enable-selected">Enable selected</button>
                 <button id="delete-selected" class="dangerous">Delete selected</button>
             </div>
-            <form class="add-song" action="/add-songs" method="post" id="add-song-form">
+            <form class="add-song" action="/api/add-song" method="post" id="add-song-form">
                 <input class="songs" type="file" name="songs" id="songs" accept="audio/*" multiple hidden>
                 <label for="songs" class="button">Select song to upload</label>
                 <input type="submit" class="submit" value="Upload 0 song" id="song-submit" disabled>
             </form>
         </div>
     </div>
-    <script src="script.js"></script>
+    <script src="files/script.js"></script>
 </body>
 </html>

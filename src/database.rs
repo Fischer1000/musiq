@@ -3,12 +3,9 @@ use std::ffi::OsStr;
 use std::fs::read_dir;
 use std::path::Path;
 
-use crate::{or_return, return_unless};
-
-pub trait Entry<T> where Self: Sized {
-    fn create_entry(data: T) -> Option<Self>;
-    fn into_data(self) -> T;
-}
+use crate::songs::Song;
+use crate::csv::CsvObject;
+use crate::{or_continue, or_return, return_unless};
 
 #[derive(Debug)]
 pub enum DatabaseError {
@@ -21,13 +18,12 @@ pub enum DatabaseError {
     FileCannotBeDeleted
 }
 
-pub struct FileDatabase<T: Eq + std::hash::Hash> {
+pub struct SongDatabase {
     root_dir: Box<Path>,
-    // entries: Vec<T>,
-    entries: HashSet<T>
+    entries: HashSet<Song>
 }
 
-impl<T: Entry<Box<Path>> + Eq + std::hash::Hash> FileDatabase<T> {
+impl SongDatabase {
     fn get_directory_contents<P: AsRef<Path>>(path: P) -> Result<impl Iterator<Item = Box<Path>>, DatabaseError> {
         use DatabaseError::DirectoryCannotBeRead;
 
@@ -46,24 +42,24 @@ impl<T: Entry<Box<Path>> + Eq + std::hash::Hash> FileDatabase<T> {
     where Box<Path>: From<P>
     {
         Self::from_vec(
-            Self::get_directory_contents(&path)?.filter_map(T::create_entry).collect(),
+            Self::get_directory_contents(&path)?.filter_map(|p| Song::new(p.as_ref())).collect(),
             path.clone()
         )
     }
 
     pub fn from_directory_filtered<P, F>(path: P, predicate: F) -> Result<Self, DatabaseError>
-    where P: AsRef<Path> + Clone, F: FnMut(&T) -> bool, Box<Path>: From<P>
+    where P: AsRef<Path> + Clone, F: FnMut(&Song) -> bool, Box<Path>: From<P>
     {
         Self::from_vec(
             Self::get_directory_contents(&path)?
-                .filter_map(T::create_entry)
+                .filter_map(|p| Song::new(p.as_ref()))
                 .filter(predicate)
                 .collect(),
             path.clone()
         )
     }
 
-    pub fn from_vec<P: AsRef<Path>>(entries: HashSet<T>, root_dir: P) -> Result<Self, DatabaseError>
+    pub fn from_vec<P: AsRef<Path>>(entries: HashSet<Song>, root_dir: P) -> Result<Self, DatabaseError>
     where Box<Path>: From<P>
     {
         Ok(Self { entries, root_dir: or_return!(root_dir.as_ref().canonicalize().ok(), Err(DatabaseError::PathCannotBeCanonicalized)).into() })
@@ -82,13 +78,35 @@ impl<T: Entry<Box<Path>> + Eq + std::hash::Hash> FileDatabase<T> {
     }
 
     #[inline]
-    pub fn inner(&self) -> &HashSet<T> {
+    pub fn inner(&self) -> &HashSet<Song> {
         &self.entries
     }
 
     #[inline]
-    fn inner_mut(&mut self) -> &mut HashSet<T> {
+    pub fn inner_mut(&mut self) -> &mut HashSet<Song> {
         &mut self.entries
+    }
+
+    pub fn refresh<F: FnMut(&Song) -> bool>(&mut self, predicate: F) -> Result<(), DatabaseError> {
+        *self = Self::from_directory_filtered(self.root_dir.as_ref(), predicate)?;
+        Ok(())
+    }
+
+    pub fn root_dir(&self) -> &Path {
+        &self.root_dir
+    }
+
+    pub fn get_songs_css(&self) -> Vec<Vec<CsvObject>> {
+        let mut result = Vec::new();
+
+        for (filename, enabled) in self.entries.iter().map(|s| (s.filename(), s.enabled())) {
+            let filename = or_continue!(filename.to_str()).into();
+            let enabled = enabled.into();
+
+            result.push(vec![filename, enabled]);
+        }
+
+        result
     }
 }
 
@@ -100,7 +118,7 @@ pub enum DatabaseTransaction {
 
 #[allow(unreachable_patterns)]
 impl DatabaseTransaction {
-    pub fn realize<T: Entry<Box<Path>> + Eq + std::hash::Hash>(self, database: &mut FileDatabase<T>) -> Result<(), (DatabaseTransaction, DatabaseError)> {
+    pub fn realize(self, database: &mut SongDatabase, file_ops: bool) -> Result<(), (DatabaseTransaction, DatabaseError)> {
         use DatabaseTransaction::*;
         use DatabaseError::*;
 
@@ -114,13 +132,16 @@ impl DatabaseTransaction {
 
                 // println!("file_path: {}\nfile_name: {}\nnew_path: {}", file_path.display(), file_name.display(), new_path.display());
 
-                or_return!(
-                    std::fs::copy(&file_path, &new_path).ok(),
-                    Err((self, CannotCopyNewFile))
-                );
+                if file_ops {
+                    or_return!(
+                        std::fs::copy(&file_path, &new_path).ok(),
+                        Err((self, CannotCopyNewFile))
+                    );
+                }
+
                 return_unless!(
                     database.entries.insert(or_return!(
-                        T::create_entry(new_path.into_boxed_path()),
+                        Song::new(new_path.as_ref()),
                         Err((self, EntryCreationFailed))
                     )),
                     Err((self, EntryAlreadyExists))
@@ -129,16 +150,18 @@ impl DatabaseTransaction {
             EntryRemoved { file_name } => {
                 let file_path = database.root_dir.join(file_name.as_ref());
 
-                match std::fs::remove_file(&file_path) {
-                    Ok(_) => (),
-                    Err(e) => match e.kind() {
-                        std::io::ErrorKind::NotFound => (),
-                        _ => return Err((self, FileCannotBeDeleted))
+                if file_ops {
+                    match std::fs::remove_file(&file_path) {
+                        Ok(_) => (),
+                        Err(e) => match e.kind() {
+                            std::io::ErrorKind::NotFound => (),
+                            _ => return Err((self, FileCannotBeDeleted))
+                        }
                     }
                 }
 
                 database.entries.remove(&or_return!(
-                    T::create_entry(file_path.into_boxed_path()),
+                    Song::new(file_path.as_ref()),
                     Err((self, EntryCreationFailed))
                 ));
             }
