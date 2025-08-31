@@ -1,15 +1,17 @@
 use std::path::Path;
-use std::fs::read;
-use crate::{int_to_bool, is_kind_of, return_unless};
+use crate::csv::CsvObject;
+use crate::{int_to_bool, is_kind_of, or_return, return_unless};
 
+#[derive(Debug)]
 pub struct Configs {
-    timetable: Timetable
+    timetable: Timetable,
+    file_path: Box<Path>
 }
 
 #[allow(unreachable_code)]
 impl Configs {
     pub fn read_from_file<P: AsRef<Path>>(path: P) -> ConfigResult<Configs> {
-        let contents = read(path).map_err(|_| Error::CannotReadFile)?;
+        let contents = or_return!(std::fs::read(&path).ok(), Err(Error::CannotReadFile));
 
         if contents.get(0..=5) != Some(b"MUSIQ\n") {
             return Err(Error::InvalidConfigFile);
@@ -36,11 +38,79 @@ impl Configs {
             i += 1;
         }
 
-        Ok(Configs { timetable: timetable.ok_or(Error::NoTimetableFound)? })
+        Ok(Configs { timetable: timetable.ok_or(Error::NoTimetableFound)?, file_path: Box::from(path.as_ref()) })
+    }
+
+    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> ConfigResult<()> {
+        let mut contents = b"MUSIQ\nT".to_vec();
+
+        contents.append(&mut self.timetable.to_bytes());
+
+        or_return!(std::fs::write(path, contents).ok(), Err(Error::CannotWriteFile));
+
+        Ok(())
     }
 
     pub fn timetable(&self) -> &Timetable {
         &self.timetable
+    }
+
+    pub fn get_timetable_csv(&self) -> Vec<Vec<CsvObject>> {
+        let data = self.timetable.days.iter().map(|d| d.to_csv()).collect::<Vec<Vec<CsvObject>>>();
+        let mut result: Vec<Vec<CsvObject>> = Vec::new();
+
+        for i in 0..8usize {
+            let mut result_row = Vec::with_capacity(5);
+            for row in data.iter() {
+                result_row.push(row[i].clone());
+            }
+            result.push(result_row);
+        }
+
+        result
+    }
+
+    pub fn get_breaks_csv(&self) -> Vec<Vec<CsvObject>> {
+        self.timetable.breaks.iter().map(|b| b.to_csv()).collect::<Vec<Vec<CsvObject>>>()
+    }
+
+    pub fn set_timetable_from_csv(&mut self, data: Vec<Vec<CsvObject>>) -> Option<()> {
+        let mut result: Vec<Day> = Vec::new();
+
+        for i in 0..5 {
+            let mut tmp = Vec::new();
+            for row in data.iter() {
+                tmp.push(row.get(i)?);
+            }
+            result.push(Day::from_csv(tmp)?);
+        }
+
+        self.timetable.days = result.try_into().ok()?;
+
+        match self.save_to_file(self.file_path.as_ref()) {
+            Ok(_) => (),
+            Err(_) => println!("Config save failed.")
+        };
+
+        Some(())
+    }
+
+    pub fn set_breaks_from_csv(&mut self, data: Vec<Vec<CsvObject>>) -> Option<()> {
+        let breaks: [Break; 8] = data
+            .into_iter()
+            .filter_map(|v| Break::from_csv(v))
+            .collect::<Vec<Break>>()
+            .try_into()
+            .ok()?;
+
+        self.timetable.breaks = breaks;
+
+        match self.save_to_file(self.file_path.as_ref()) {
+            Ok(_) => (),
+            Err(_) => println!("Config save failed.")
+        };
+
+        Some(())
     }
 }
 
@@ -77,6 +147,22 @@ impl Timetable {
             .ok()?;
 
         Some(Timetable { days, breaks })
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+
+        for b in &self.breaks {
+            let (hi, lo) = b.to_bytes();
+            result.push(hi);
+            result.push(lo);
+        }
+
+        for d in &self.days {
+            result.push(d.to_byte());
+        }
+
+        result
     }
 
     pub fn display(&self) -> String {
@@ -123,11 +209,7 @@ impl Break {
         let start = Self::parse_time(start_hour, start_minute)?;
         let end = Self::parse_time(end_hour, end_minute)?;
 
-        if start >= end {
-            Some(Break { value: u16::from_be_bytes([start, end]) } )
-        } else {
-            None
-        }
+        Some(Break { value: u16::from_be_bytes([start, end]) } )
     }
 
     fn parse_time(hour: u8, minute: u8) -> Option<u8> {
@@ -200,6 +282,29 @@ impl Break {
         let [hi, lo] = self.value.to_be_bytes();
         (hi, lo)
     }
+
+    pub fn to_csv(&self) -> Vec<CsvObject> {
+        let (sh, sm, eh, em) = self.to_time();
+        vec![format!("{sh:02}:{sm:02}").into(), format!("{eh:02}:{em:02}").into()]
+    }
+
+    pub fn from_csv(csv: Vec<CsvObject>) -> Option<Break> {
+        let [start, end] = csv.try_into().ok()?;
+
+        match (start, end) {
+            (CsvObject::String(start), CsvObject::String(end)) => {
+                let ((sh, sm), (eh, em)) = (Self::time_from_str(start.as_ref())?, Self::time_from_str(end.as_ref())?);
+                Self::new(sh, sm, eh, em)
+            },
+            _ => None
+        }
+    }
+
+    fn time_from_str(s: &str) -> Option<(u8, u8)> {
+        let (h, m) = s.split_once(':')?;
+
+        Some((h.parse().ok()?, m.parse().ok()?))
+    }
 }
 
 impl std::fmt::Debug for Break {
@@ -224,6 +329,10 @@ impl Day {
         Day { data: *byte }
     }
 
+    fn to_byte(&self) -> u8 {
+        self.data
+    }
+
     fn to_bools(&self) -> [bool; 8] {
         let mut res: [bool; 8] = [false; 8];
         let mut data = *&self.data;
@@ -234,6 +343,32 @@ impl Day {
         }
 
         res
+    }
+
+    fn from_bools(bools: [bool; 8]) -> Day {
+        let mut result = bools[0] as u8;
+
+        for i in 1..8 {
+            result <<= 1;
+            result |= bools[i] as u8;
+        }
+
+        Day { data: result }
+    }
+
+    pub fn to_csv(&self) -> Vec<CsvObject> {
+        self.to_bools().to_vec().iter().map(|b| CsvObject::from(*b)).collect::<Vec<CsvObject>>()
+    }
+
+    pub fn from_csv(csv: Vec<&CsvObject>) -> Option<Day> {
+        Some(Self::from_bools(
+            csv
+                .into_iter()
+                .filter_map(|v| v.as_bool())
+                .collect::<Vec<_>>()
+                .try_into()
+                .ok()?
+        ))
     }
 }
 
@@ -261,6 +396,7 @@ pub enum Error {
     CannotReadFile,
     InvalidConfigFile,
     NoTimetableFound,
+    CannotWriteFile
 }
 
 type ConfigResult<T> = Result<T, Error>;

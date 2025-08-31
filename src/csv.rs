@@ -1,7 +1,7 @@
 pub const DEFAULT_SEPARATOR: char = ',';
 
 /// A single value that can be represented in CSV
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CsvObject {
     /// A string value
     String(Box<str>),
@@ -94,6 +94,13 @@ impl CsvObject {
     pub fn as_string(&self) -> Option<&str> {
         match self {
             CsvObject::String(s) => Some(s.as_ref()),
+            _ => None
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            CsvObject::Bool(b) => Some(*b),
             _ => None
         }
     }

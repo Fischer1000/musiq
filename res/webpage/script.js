@@ -121,14 +121,37 @@ function customSubmit(event, callback = () => {}) {
     // Prevent default form submission
     event.preventDefault();
 
+    const checkboxes = document.querySelectorAll("#timetable input[type=checkbox]");
+    const times = document.querySelectorAll("#timetable input[type=time]");
+
+    const checkboxLines = [];
+    for (let row = 0; row < 8; row++) {
+        const rowArr = [];
+        for (let col = 0; col < 5; col++) {
+            const index = row * 5 + col; // row-major index
+            rowArr.push(checkboxes[index].checked);
+        }
+        checkboxLines.push(arrayToCsv(rowArr));
+    }
+
+    const timeLines = [];
+    for (let row = 0; row < 8; row++) {
+        const rowArr = [];
+        for (let col = 0; col < 2; col++) {
+            const index = row * 2 + col; // row-major index
+            rowArr.push(times[index].value);
+        }
+        timeLines.push(arrayToCsv(rowArr));
+    }
+
     // Collect form data
     const form = event.target;
-    const formData = new FormData(form);
 
-    // Example: send data with fetch instead of normal submit
-    fetch(form.action, {
+    let finished = 0;
+
+    fetch("/api/set-timetable", {
         method: form.method,
-        body: formData
+        body: checkboxLines.join('\r\n')
     })
         .then(response => response.text())
         .then(data => {
@@ -137,7 +160,30 @@ function customSubmit(event, callback = () => {}) {
         .catch(error => {
             console.error("Error:", error);
         })
-        .then(callback);
+        .then(() => {
+            finished++;
+            if (finished === 2) {
+                callback();
+            }
+        });
+
+    fetch("/api/set-breaks", {
+        method: form.method,
+        body: timeLines.join('\r\n')
+    })
+        .then(response => response.text())
+        .then(data => {
+            console.log("Server response:", data);
+        })
+        .catch(error => {
+            console.error("Error:", error);
+        })
+        .then(() => {
+            finished++;
+            if (finished === 2) {
+                callback();
+            }
+        });
 }
 
 function submitMultipleFiles(event, callback = () => {}) {
@@ -191,22 +237,21 @@ function csvToValue(csvLine) {
 }
 
 function arrayToCsv(arr) {
-    let result = "";
+    let result = [];
 
     for (const val of arr) {
         if (val === null) {
             // Do nothing
         } else if (typeof (val) === 'string') {
-            result += '"' + val + '"';
+            result.push('"' + val + '"');
         } else if (typeof (val) === 'boolean') {
-            result += String(val);
+            result.push(String(val));
         } else if (typeof (val) === 'number') {
-            result += String(val);
+            result.push(String(val));
         }
-        result += ',';
     }
 
-    return result;
+    return result.join(',');
 }
 
 // Fetch the timetable

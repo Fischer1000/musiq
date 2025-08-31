@@ -3,7 +3,11 @@
 #![deny(keyword_idents, unsafe_op_in_unsafe_fn)]
 #![forbid(deprecated_safe_2024, non_ascii_idents, unused_crate_dependencies)]
 
+use std::mem;
+use std::mem::MaybeUninit;
+
 pub static SONG_FILES_DIR: &str = ".\\songs\\";
+pub static CONFIG_FILE_PATH: &str = ".\\config.musiq";
 
 pub mod songs;
 mod macros;

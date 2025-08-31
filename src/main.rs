@@ -1,11 +1,11 @@
-use std::io::Write;
 use std::path::Path;
 
-use musiq::{database, embedded_files};
+use musiq::database;
 use musiq::songs;
+use musiq::webserver;
+use musiq::config;
 
 use musiq::or_return;
-use musiq::webserver;
 
 static SUPPORTED_EXTENSIONS: &[&str] = &["mp3"];
 
@@ -36,5 +36,13 @@ fn main() {
         }
     };
 
-    webserver::listen("localhost:7878", webserver::handle_request, database).unwrap();
+    let mut configs = match config::Configs::read_from_file(musiq::CONFIG_FILE_PATH) {
+        Ok(configs) => configs,
+        Err(_) => {
+            println!("Config file cannot be read or is invalid. Terminating...");
+            return;
+        }
+    };
+
+    webserver::start_server("localhost:7878", webserver::handle_request, database, configs).unwrap();
 }

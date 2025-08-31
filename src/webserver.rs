@@ -8,6 +8,7 @@ use std::path::Path;
 
 
 use crate::{is_kind_of, or_continue, or_return, stat};
+use crate::config::Configs;
 use crate::embedded_files;
 use crate::csv::{CsvObject, DEFAULT_SEPARATOR};
 use crate::songs::Song;
@@ -275,13 +276,13 @@ impl Response {
 }
 
 type Database = crate::database::SongDatabase;
-pub fn listen<A: ToSocketAddrs, H: Fn(Result<Request, Error>, &mut Database) -> Response>(addr: A, handler: H, mut database: Database) -> Result<Infallible, Error> {
+pub fn start_server<A: ToSocketAddrs, H: Fn(Result<Request, Error>, &mut Database, &mut Configs) -> Response>(addr: A, handler: H, mut database: Database, mut configs: Configs) -> Result<Infallible, Error> {
     let listener = TcpListener::bind(addr).map_err(|_| Error::CannotBind)?;
 
     for stream in listener.incoming() {
         let mut stream = or_continue!(stream.ok());
 
-        let response = handler(Request::from_stream(&stream), &mut database);
+        let response = handler(Request::from_stream(&stream), &mut database, &mut configs);
 
         or_continue!(stream.write_all(response.as_bytes().as_slice()).ok())
     }
@@ -289,7 +290,7 @@ pub fn listen<A: ToSocketAddrs, H: Fn(Result<Request, Error>, &mut Database) -> 
     unreachable!()
 }
 
-pub fn handle_request(request: Result<Request, Error>, database: &mut Database) -> Response {
+pub fn handle_request(request: Result<Request, Error>, database: &mut Database, configs: &mut Configs) -> Response {
     let request = match request {
         Ok(r) => r,
         Err(e) => return match e {
@@ -304,13 +305,13 @@ pub fn handle_request(request: Result<Request, Error>, database: &mut Database) 
     };
 
     match request {
-        Request::Get { uri, headers } => handle_get(uri, headers, database),
-        Request::Post { uri, headers, body } => handle_post(uri, headers, body, database),
+        Request::Get { uri, headers } => handle_get(uri, headers, database, configs),
+        Request::Post { uri, headers, body } => handle_post(uri, headers, body, database, configs),
         _ => return Response::not_implemented()
     }
 }
 
-fn handle_get(uri: Uri, headers: Headers, database: &Database) -> Response {
+fn handle_get(uri: Uri, headers: Headers, database: &Database, configs: &Configs) -> Response {
     let content_type: &'static str;
 
     let body = 'match_uri: {
@@ -319,8 +320,20 @@ fn handle_get(uri: Uri, headers: Headers, database: &Database) -> Response {
             "/files/styles.css" => { content_type = "text/css"; embedded_files::STYLES_CSS },
             "/files/script.js" => { content_type = "text/javascript"; embedded_files::SCRIPT_JS },
             "/files/favicon.svg" => { content_type = "image/svg+xml"; embedded_files::FAVICON_SVG },
-            "/data/timetable.csv" => return Response::not_found(),
-            "/data/breaks.csv" => return Response::not_found(),
+            "/data/timetable.csv" => break 'match_uri {
+                content_type = "text/csv";
+                CsvObject::serialize(
+                    configs.get_timetable_csv(),
+                    DEFAULT_SEPARATOR,
+                ).into_bytes()
+            },
+            "/data/breaks.csv" => break 'match_uri {
+                content_type = "text/csv";
+                CsvObject::serialize(
+                    configs.get_breaks_csv(),
+                    DEFAULT_SEPARATOR,
+                ).into_bytes()
+            },
             "/data/songs.csv" => break 'match_uri {
                 content_type = "text/csv";
                 CsvObject::serialize(
@@ -338,24 +351,51 @@ fn handle_get(uri: Uri, headers: Headers, database: &Database) -> Response {
     Response::new(200, "OK", headers, body).unwrap()
 }
 
-fn handle_post(uri: Uri, headers: Headers, body: Body, database: &mut Database) -> Response {
+macro_rules! csv_from_utf8_or_return {
+    ($bytes:expr, $error:expr) => {
+        CsvObject::from_str(
+            or_return!(
+                str::from_utf8($bytes).ok(),
+                $error
+            ),
+            DEFAULT_SEPARATOR
+        )
+    };
+}
+
+fn handle_post(uri: Uri, headers: Headers, body: Body, database: &mut Database, configs: &mut Configs) -> Response {
     // println!("URI: {:?}\nHeaders:\n{}Body length: {}\n", uri, headers.join("\n"), body.len());
 
     // println!("{:?}", String::from_utf8(body.clone()).or::<()>(Ok("".to_string())));
 
     match uri.without_query_parameters() {
-        "/api/set-timetable" => Response::internal_server_error(),
+        "/api/set-timetable" => {
+            or_return!(configs.set_timetable_from_csv(
+                csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
+                ),
+                Response::bad_request()
+            );
+
+            Response::ok("Timetable successfully set".into())
+        },
+        "/api/set-breaks" => {
+            or_return!(configs.set_breaks_from_csv(
+                csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
+                ),
+                Response::bad_request()
+            );
+
+            Response::ok("Timetable successfully set".into())
+        },
         "/api/disable-songs" => {
             let mut success: u16 = 0;
 
             for name in (
                 or_return!(
-                    CsvObject::from_str(
-                        or_return!(
-                            str::from_utf8(body.as_slice()).ok(),
-                            Response::bad_request()),
-                        DEFAULT_SEPARATOR
-                    ).into_iter().take(1).next(),
+                    csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
+                        .into_iter()
+                        .take(1)
+                        .next(),
                     Response::bad_request()
                 ).iter().filter_map(|v| v.as_string())
             ) {
@@ -386,12 +426,10 @@ fn handle_post(uri: Uri, headers: Headers, body: Body, database: &mut Database) 
 
             for name in (
                 or_return!(
-                    CsvObject::from_str(
-                        or_return!(
-                            str::from_utf8(body.as_slice()).ok(),
-                            Response::bad_request()),
-                        DEFAULT_SEPARATOR
-                    ).into_iter().take(1).next(),
+                    csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
+                        .into_iter()
+                        .take(1)
+                        .next(),
                     Response::bad_request()
                 ).iter().filter_map(|v| v.as_string())
             ) {
@@ -423,12 +461,10 @@ fn handle_post(uri: Uri, headers: Headers, body: Body, database: &mut Database) 
 
             for name in (
                 or_return!(
-                    CsvObject::from_str(
-                        or_return!(
-                            str::from_utf8(body.as_slice()).ok(),
-                            Response::bad_request()),
-                        DEFAULT_SEPARATOR
-                    ).into_iter().take(1).next(),
+                    csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
+                        .into_iter()
+                        .take(1)
+                        .next(),
                     Response::bad_request()
                 ).iter().filter_map(|v| v.as_string())
             ) {
