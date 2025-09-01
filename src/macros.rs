@@ -6,7 +6,20 @@ macro_rules! or_continue {
     ($e:expr, $c:stmt) => {
         match $e {
             Some(x) => x,
-            None => { $c; continue }
+            None => { $c; continue; }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! or_break {
+    ($e:expr) => {
+        or_break!($e, ())
+    };
+    ($e:expr, $c:stmt) => {
+        match $e {
+            Some(x) => x,
+            None => { $c; break; }
         }
     };
 }
@@ -90,6 +103,16 @@ macro_rules! int_to_bool {
             0 => Some(false),
             1 => Some(true),
             _ => None
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! or {
+    ($v:expr, $e:expr) => {
+        match $v {
+            Some(x) => x,
+            None => $e
         }
     }
 }

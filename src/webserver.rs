@@ -5,13 +5,10 @@ use std::net::{TcpListener, ToSocketAddrs, TcpStream};
 use std::io::{BufReader, BufRead, Write, Read};
 use std::mem::MaybeUninit;
 use std::path::Path;
-
-
 use crate::{is_kind_of, or_continue, or_return, stat};
 use crate::config::Configs;
 use crate::embedded_files;
 use crate::csv::{CsvObject, DEFAULT_SEPARATOR};
-use crate::songs::Song;
 
 const MAX_BODY_SIZE: usize = 500_000_000;
 static METHODS_WITH_BODY: &[&str] = &["POST"];
@@ -20,6 +17,7 @@ static METHODS_WITH_BODY: &[&str] = &["POST"];
 #[non_exhaustive]
 pub enum Error {
     CannotBind,
+    CannotSetNonblocking,
     RequestReadFailed,
     InvalidRequest,
     CannotInferLength,
@@ -290,6 +288,7 @@ pub fn start_server<A: ToSocketAddrs, H: Fn(Result<Request, Error>, &mut Databas
     unreachable!()
 }
 
+#[must_use = "Requests must be replied to"]
 pub fn handle_request(request: Result<Request, Error>, database: &mut Database, configs: &mut Configs) -> Response {
     let request = match request {
         Ok(r) => r,

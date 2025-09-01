@@ -1,5 +1,10 @@
+extern crate rand;
+
+use rand::{rng, seq::SliceRandom};
 use std::ffi::OsStr;
 use std::path::Path;
+
+use crate::database::SongDatabase;
 
 #[derive(Debug, Eq, Clone)]
 pub struct Song {
@@ -31,6 +36,10 @@ impl Song {
     pub fn disable(&mut self) {
         self.enabled = false;
     }
+
+    pub fn play(&self) {
+        todo!()
+    }
 }
 
 impl std::fmt::Display for Song {
@@ -48,5 +57,31 @@ impl std::hash::Hash for Song {
 impl std::cmp::PartialEq for Song {
     fn eq(&self, other: &Self) -> bool {
         self.filename == other.filename
+    }
+}
+
+/// Composes a playlist with the given number of elements from a database's songs.
+pub fn compose_playlist(elem_cnt: usize, database: &SongDatabase) -> Option<Vec<Song>> {
+    let mut elems: Vec<_> = database
+        .inner()
+        .iter()
+        .filter_map(|e| if e.enabled { Some(e.clone()) } else { None })
+        .collect();
+
+    if elem_cnt < elems.len() { return None; }
+
+    elems.shuffle(&mut rng());
+
+    elems.truncate(elem_cnt);
+
+    Some(elems)
+}
+
+/// Plays each song in a playlist sequentially.
+/// # Warning
+/// This function blocks its thread while the songs are playing.
+pub fn play(playlist: &[Song]) {
+    for song in playlist {
+        song.play();
     }
 }

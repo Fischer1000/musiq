@@ -1,11 +1,13 @@
 use std::path::Path;
 use crate::csv::CsvObject;
-use crate::{int_to_bool, is_kind_of, or_return, return_unless};
+use crate::{int_to_bool, is_kind_of, or_return, return_unless, stat};
+use crate::time::{Day, Time};
 
 #[derive(Debug)]
 pub struct Configs {
     timetable: Timetable,
-    file_path: Box<Path>
+    file_path: Box<Path>,
+    utc_offset: i8
 }
 
 #[allow(unreachable_code)]
@@ -18,9 +20,10 @@ impl Configs {
         }
 
         let mut timetable: Option<Timetable> = None;
+        let mut utc_offset: Option<i8> = None;
 
         let mut i = 6;
-        'search: while i < contents.len() && !is_kind_of!(timetable, Some(_)) {
+        'search: while i < contents.len() {
             match contents.get(i) {
                 Some(b'T') => {
                     timetable = Timetable::from_bytes(contents
@@ -30,15 +33,23 @@ impl Configs {
                     i += 22;
                     continue 'search;
                 },
+                Some(b'O') => {
+                    utc_offset = Some(*contents.get(i + 1)
+                        .ok_or(Error::InvalidConfigFile)? as i8);
+                    i += 2;
+                    continue 'search;
+                },
                 Some(_) => todo!(),
                 None => return Err(Error::InvalidConfigFile),
             }
 
-
             i += 1;
         }
 
-        Ok(Configs { timetable: timetable.ok_or(Error::NoTimetableFound)?, file_path: Box::from(path.as_ref()) })
+        let timetable = timetable.ok_or(Error::NoTimetableFound)?;
+        let utc_offset = utc_offset.ok_or(Error::NoTimetableFound)?;
+
+        Ok(Configs { timetable, utc_offset, file_path: Box::from(path.as_ref()) })
     }
 
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> ConfigResult<()> {
@@ -75,14 +86,14 @@ impl Configs {
     }
 
     pub fn set_timetable_from_csv(&mut self, data: Vec<Vec<CsvObject>>) -> Option<()> {
-        let mut result: Vec<Day> = Vec::new();
+        let mut result: Vec<DailySchedule> = Vec::new();
 
         for i in 0..5 {
             let mut tmp = Vec::new();
             for row in data.iter() {
                 tmp.push(row.get(i)?);
             }
-            result.push(Day::from_csv(tmp)?);
+            result.push(DailySchedule::from_csv(tmp)?);
         }
 
         self.timetable.days = result.try_into().ok()?;
@@ -112,11 +123,19 @@ impl Configs {
 
         Some(())
     }
+
+    pub fn utc_offset(&self) -> i8 {
+        self.utc_offset
+    }
+
+    pub unsafe fn set_utc_offset_unchecked(&mut self, utc_offset: i8) {
+        self.utc_offset = utc_offset;
+    }
 }
 
 #[derive(Debug)]
 pub struct Timetable {
-    days: [Day; 5],
+    days: [DailySchedule; 5],
     breaks: [Break; 8],
 }
 
@@ -141,7 +160,7 @@ impl Timetable {
         let days = bytes
             .get(16..=20)?
             .iter()
-            .map(Day::from_byte)
+            .map(DailySchedule::from_byte)
             .collect::<Vec<_>>()
             .try_into()
             .ok()?;
@@ -197,6 +216,23 @@ impl Timetable {
         }
 
         format!("{}", buf)
+    }
+
+    /// Returns `Option<true>` when a break should start and `Option<false>` when it should end.
+    pub fn action(&self, time: &Time, day: &Day) -> Option<bool> {
+        let break_enabled = self.days[day.as_day_number() as usize].to_bools();
+
+        for i in 0..8 {
+            if !break_enabled[i] { continue; }
+
+            let (sh, sm, eh, em) = self.breaks[i].to_time();
+            let (hour, minute, _) = time.to_hms();
+
+            if hour == sh && minute == sm { return Some(true); }
+            if hour == eh && minute == em { return Some(false); }
+        }
+
+        None
     }
 }
 
@@ -283,12 +319,12 @@ impl Break {
         (hi, lo)
     }
 
-    pub fn to_csv(&self) -> Vec<CsvObject> {
+    fn to_csv(&self) -> Vec<CsvObject> {
         let (sh, sm, eh, em) = self.to_time();
         vec![format!("{sh:02}:{sm:02}").into(), format!("{eh:02}:{em:02}").into()]
     }
 
-    pub fn from_csv(csv: Vec<CsvObject>) -> Option<Break> {
+    fn from_csv(csv: Vec<CsvObject>) -> Option<Break> {
         let [start, end] = csv.try_into().ok()?;
 
         match (start, end) {
@@ -320,13 +356,13 @@ impl std::fmt::Display for Break {
     }
 }
 
-struct Day {
+struct DailySchedule {
     data: u8
 }
 
-impl Day {
-    fn from_byte(byte: &u8) -> Day {
-        Day { data: *byte }
+impl DailySchedule {
+    fn from_byte(byte: &u8) -> DailySchedule {
+        DailySchedule { data: *byte }
     }
 
     fn to_byte(&self) -> u8 {
@@ -345,7 +381,7 @@ impl Day {
         res
     }
 
-    fn from_bools(bools: [bool; 8]) -> Day {
+    fn from_bools(bools: [bool; 8]) -> DailySchedule {
         let mut result = bools[0] as u8;
 
         for i in 1..8 {
@@ -353,14 +389,14 @@ impl Day {
             result |= bools[i] as u8;
         }
 
-        Day { data: result }
+        DailySchedule { data: result }
     }
 
-    pub fn to_csv(&self) -> Vec<CsvObject> {
+    fn to_csv(&self) -> Vec<CsvObject> {
         self.to_bools().to_vec().iter().map(|b| CsvObject::from(*b)).collect::<Vec<CsvObject>>()
     }
 
-    pub fn from_csv(csv: Vec<&CsvObject>) -> Option<Day> {
+    fn from_csv(csv: Vec<&CsvObject>) -> Option<DailySchedule> {
         Some(Self::from_bools(
             csv
                 .into_iter()
@@ -372,7 +408,7 @@ impl Day {
     }
 }
 
-impl std::fmt::Debug for Day {
+impl std::fmt::Debug for DailySchedule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let bools = self.to_bools();
         let mut buf = String::with_capacity(8);
@@ -385,7 +421,7 @@ impl std::fmt::Debug for Day {
     }
 }
 
-impl std::fmt::Display for Day {
+impl std::fmt::Display for DailySchedule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Debug::fmt(self, f)
     }

@@ -4,6 +4,7 @@ use musiq::database;
 use musiq::songs;
 use musiq::webserver;
 use musiq::config;
+use musiq::embedded_files;
 
 use musiq::or_return;
 
@@ -22,7 +23,7 @@ fn has_allowed_extension(s: &songs::Song) -> bool {
 }
 
 fn main() {
-    let mut database = match database::SongDatabase::from_directory_filtered(
+    let database = match database::SongDatabase::from_directory_filtered(
         Path::new(musiq::SONG_FILES_DIR),
         has_allowed_extension
     ) {
@@ -36,10 +37,14 @@ fn main() {
         }
     };
 
-    let mut configs = match config::Configs::read_from_file(musiq::CONFIG_FILE_PATH) {
+    let configs = match config::Configs::read_from_file(musiq::CONFIG_FILE_PATH) {
         Ok(configs) => configs,
         Err(_) => {
-            println!("Config file cannot be read or is invalid. Terminating...");
+            std::fs::write(musiq::CONFIG_FILE_PATH, embedded_files::CONFIG_MUSIQ).unwrap();
+            eprintln!(
+                "Config file cannot be read or is invalid. A default one was created at \"{}\". Terminating...",
+                 musiq::CONFIG_FILE_PATH
+            );
             return;
         }
     };
