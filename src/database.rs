@@ -5,27 +5,31 @@ use std::path::Path;
 
 use crate::songs::Song;
 use crate::csv::CsvObject;
-use crate::{or_continue, or_return, return_unless};
+use crate::{csv, or_continue, or_return, return_unless, stat};
+use crate::Error;
 
+/*
 #[derive(Debug)]
-pub enum DatabaseError {
+pub enum Error {
     DirectoryCannotBeRead,
     CannotCopyNewFile,
     InvalidNewFileName,
     EntryCreationFailed,
     EntryAlreadyExists,
     PathCannotBeCanonicalized,
-    FileCannotBeDeleted
+    FileCannotBeDeleted,
+    InvalidCSV
 }
+*/
 
 pub struct SongDatabase {
     root_dir: Box<Path>,
-    entries: HashSet<Song>
+    songs: HashSet<Song>
 }
 
 impl SongDatabase {
-    fn get_directory_contents<P: AsRef<Path>>(path: P) -> Result<impl Iterator<Item = Box<Path>>, DatabaseError> {
-        use DatabaseError::DirectoryCannotBeRead;
+    fn get_directory_contents<P: AsRef<Path>>(path: P) -> Result<impl Iterator<Item = Box<Path>>, Error> {
+        use Error::DirectoryCannotBeRead;
 
         Ok(read_dir(&path)
             .map_err(|_| DirectoryCannotBeRead)?
@@ -38,7 +42,7 @@ impl SongDatabase {
         )
     }
 
-    pub fn from_directory<P: AsRef<Path> + Clone>(path: P) -> Result<Self, DatabaseError>
+    pub fn from_directory<P: AsRef<Path> + Clone>(path: P) -> Result<Self, Error>
     where Box<Path>: From<P>
     {
         Self::from_vec(
@@ -47,7 +51,7 @@ impl SongDatabase {
         )
     }
 
-    pub fn from_directory_filtered<P, F>(path: P, predicate: F) -> Result<Self, DatabaseError>
+    pub fn from_directory_filtered<P, F>(path: P, predicate: F) -> Result<Self, Error>
     where P: AsRef<Path> + Clone, F: FnMut(&Song) -> bool, Box<Path>: From<P>
     {
         Self::from_vec(
@@ -59,10 +63,10 @@ impl SongDatabase {
         )
     }
 
-    pub fn from_vec<P: AsRef<Path>>(entries: HashSet<Song>, root_dir: P) -> Result<Self, DatabaseError>
+    pub fn from_vec<P: AsRef<Path>>(entries: HashSet<Song>, root_dir: P) -> Result<Self, Error>
     where Box<Path>: From<P>
     {
-        Ok(Self { entries, root_dir: or_return!(root_dir.as_ref().canonicalize().ok(), Err(DatabaseError::PathCannotBeCanonicalized)).into() })
+        Ok(Self { songs: entries, root_dir: or_return!(root_dir.as_ref().canonicalize().ok(), Err(Error::PathCannotBeCanonicalized)).into() })
     }
 
     #[inline]
@@ -79,15 +83,15 @@ impl SongDatabase {
 
     #[inline]
     pub fn inner(&self) -> &HashSet<Song> {
-        &self.entries
+        &self.songs
     }
 
     #[inline]
     pub fn inner_mut(&mut self) -> &mut HashSet<Song> {
-        &mut self.entries
+        &mut self.songs
     }
 
-    pub fn refresh<F: FnMut(&Song) -> bool>(&mut self, predicate: F) -> Result<(), DatabaseError> {
+    pub fn refresh<F: FnMut(&Song) -> bool>(&mut self, predicate: F) -> Result<(), Error> {
         *self = Self::from_directory_filtered(self.root_dir.as_ref(), predicate)?;
         Ok(())
     }
@@ -96,10 +100,13 @@ impl SongDatabase {
         &self.root_dir
     }
 
-    pub fn get_songs_css(&self) -> Vec<Vec<CsvObject>> {
+    pub fn get_songs_csv(&self) -> Vec<Vec<CsvObject>> {
         let mut result = Vec::new();
 
-        for (filename, enabled) in self.entries.iter().map(|s| (s.filename(), s.enabled())) {
+        let mut entries = self.songs.iter().map(|s| (s.filename(), s.enabled())).collect::<Vec<_>>();
+        entries.sort_by(|(f0, _), (f1, _)| f0.cmp(f1));
+
+        for (filename, enabled) in entries {
             let filename = or_continue!(filename.to_str()).into();
             let enabled = enabled.into();
 
@@ -107,6 +114,53 @@ impl SongDatabase {
         }
 
         result
+    }
+
+    /// Updates this database with the contents of the given CSV
+    /// and returns the number of valid entries added or changed.
+    pub fn update_from_csv(&mut self, entries: Vec<Vec<CsvObject>>) -> Result<usize, Error> {
+        let mut added: usize = 0;
+
+        for entry in entries {
+            let [filename, enabled]: [CsvObject; 2] = or_return!(entry.try_into().ok(), Err(Error::InvalidCSV));
+
+            let filename = Path::new( or_return!(
+                filename.as_string(),
+                Err(Error::InvalidCSV)
+            ));
+
+            if !self.root_dir.join(filename).exists() { continue; }
+
+            let mut song = or_return!(
+                Song::new(filename),
+                Err(Error::InvalidCSV)
+            );
+
+            if or_return!(enabled.as_bool(), Err(Error::InvalidCSV)) {
+                song.enable();
+            } else {
+                song.disable();
+            }
+
+            self.songs.replace(song);
+
+            added += 1;
+        }
+
+        Ok(added)
+    }
+
+    pub fn reset_played(&mut self) {
+        let songs = self
+            .songs
+            .iter()
+            .map(|song| {
+                let mut s = song.clone();
+                s.set_played(false);
+                s
+            })
+            .collect::<HashSet<_>>();
+        self.songs = songs;
     }
 }
 
@@ -118,9 +172,9 @@ pub enum DatabaseTransaction {
 
 #[allow(unreachable_patterns)]
 impl DatabaseTransaction {
-    pub fn realize(self, database: &mut SongDatabase, file_ops: bool) -> Result<(), (DatabaseTransaction, DatabaseError)> {
+    pub fn realize(self, database: &mut SongDatabase, file_ops: bool) -> Result<(), (DatabaseTransaction, Error)> {
         use DatabaseTransaction::*;
-        use DatabaseError::*;
+        use Error::*;
 
         match &self {
             EntryAdded { file_path } => {
@@ -140,7 +194,7 @@ impl DatabaseTransaction {
                 }
 
                 return_unless!(
-                    database.entries.insert(or_return!(
+                    database.songs.insert(or_return!(
                         Song::new(new_path.as_ref()),
                         Err((self, EntryCreationFailed))
                     )),
@@ -160,7 +214,7 @@ impl DatabaseTransaction {
                     }
                 }
 
-                database.entries.remove(&or_return!(
+                database.songs.remove(&or_return!(
                     Song::new(file_path.as_ref()),
                     Err((self, EntryCreationFailed))
                 ));

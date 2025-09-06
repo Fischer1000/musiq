@@ -1,3 +1,4 @@
+use std::fmt::write;
 use std::time::SystemTime;
 
 /// Represents a time of day
@@ -66,6 +67,12 @@ impl Time {
         if seconds as u32 >= Self::SECS_PER_MIN  { return None }
 
         Some(Time { data: ((hours as u32 * Self::MINS_PER_HOUR) + minutes as u32) * Self::SECS_PER_MIN + (seconds as u32) })
+    }
+}
+
+impl std::fmt::Display for Time {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{:02}:{:02}:{:02}", self.hours(), self.minutes(), self.seconds())
     }
 }
 

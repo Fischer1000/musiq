@@ -1,14 +1,19 @@
+use std::io::Write;
 use std::path::Path;
 
-use musiq::database;
 use musiq::songs;
+
+/*
+use musiq::database;
 use musiq::webserver;
 use musiq::config;
 use musiq::embedded_files;
+*/
 
 use musiq::or_return;
 
 static SUPPORTED_EXTENSIONS: &[&str] = &["mp3"];
+static HOST_ADDRESS: &str = "localhost:80";
 
 fn has_allowed_extension(s: &songs::Song) -> bool {
     SUPPORTED_EXTENSIONS.contains(
@@ -23,6 +28,7 @@ fn has_allowed_extension(s: &songs::Song) -> bool {
 }
 
 fn main() {
+    /*
     let database = match database::SongDatabase::from_directory_filtered(
         Path::new(musiq::SONG_FILES_DIR),
         has_allowed_extension
@@ -50,4 +56,10 @@ fn main() {
     };
 
     webserver::start_server("localhost:7878", webserver::handle_request, database, configs).unwrap();
+    */
+
+    match musiq::main(HOST_ADDRESS, musiq::SONG_FILES_DIR, has_allowed_extension, musiq::CONFIG_FILE_PATH) {
+        Ok(_) => unreachable!(),
+        Err(_err) => ()
+    }
 }

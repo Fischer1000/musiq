@@ -101,6 +101,47 @@ th {
     font-weight: bold;
 }
 
+.utc-offset {
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+#utc-offset-holder {
+    width: max-content;
+    height: max-content;
+    padding: 1vh;
+    border-radius: 1vw;
+    background-color: #4f5d75;
+}
+
+#utc-offset-label {
+    font-weight: bold;
+}
+
+#utc-offset {
+    margin-left: 0.5vw;
+    width: 30px;
+    height: max-content;
+    background-color: #bfc0c0;
+    border-style: none;
+    border-radius: 0.5vw;
+    padding: 0.5vh;
+    color: #2d3142;
+}
+
+#utc-offset:hover {
+    background-color: #9fa0a0;
+    color: #ffffff;
+}
+
+#add-song-form {
+    display: flex;
+}
+
+#song-submit {
+    margin-left: auto;
+}
+
 div.button-holder {
     width: 100%;
     display: flex;
@@ -119,6 +160,10 @@ div.button-holder {
     margin-left: auto;
 }
 
+#save-timetable {
+    margin-left: auto;
+}
+
 input.submit, label.button, button {
     background-color: #bfc0c0;
     color: #2d3142;
@@ -131,6 +176,11 @@ input.submit, label.button, button {
     font-family: Bahnschrift, sans-serif;
     margin-top: 0.5vh;
     margin-bottom: 0.5vh;
+    min-width: 9vw;
+}
+
+#songs-label {
+    min-width: calc(9vw - 2vh);
 }
 
 .dangerous {

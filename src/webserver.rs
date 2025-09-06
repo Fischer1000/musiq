@@ -1,18 +1,25 @@
 use std::collections::HashSet;
 use std::convert::Infallible;
 use std::ffi::OsStr;
+use std::fmt::format;
 use std::net::{TcpListener, ToSocketAddrs, TcpStream};
 use std::io::{BufReader, BufRead, Write, Read};
 use std::mem::MaybeUninit;
 use std::path::Path;
-use crate::{is_kind_of, or_continue, or_return, stat};
+
+use cpal::traits::HostTrait;
+
+use crate::{or_continue, or_return, songs, stat, time};
 use crate::config::Configs;
 use crate::embedded_files;
 use crate::csv::{CsvObject, DEFAULT_SEPARATOR};
+use crate::Error;
+use crate::songs::Song;
 
 const MAX_BODY_SIZE: usize = 500_000_000;
 static METHODS_WITH_BODY: &[&str] = &["POST"];
 
+/*
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error {
@@ -23,8 +30,10 @@ pub enum Error {
     CannotInferLength,
     InvalidUtf8,
     UnsupportedMethod,
-    BodyTooLarge
+    BodyTooLarge,
+    InvalidConfigFile
 }
+*/
 
 pub type Headers = Vec<String>;
 pub type Body = Vec<u8>;
@@ -271,6 +280,15 @@ impl Response {
             body: Vec::new()
         }
     }
+
+    pub fn unprocessable_request() -> Response {
+        Response {
+            status_code: Self::store_status_code(422).unwrap(),
+            reason: "Unprocessable Content".into(),
+            headers: Vec::new(),
+            body: Vec::new()
+        }
+    }
 }
 
 type Database = crate::database::SongDatabase;
@@ -310,7 +328,7 @@ pub fn handle_request(request: Result<Request, Error>, database: &mut Database, 
     }
 }
 
-fn handle_get(uri: Uri, headers: Headers, database: &Database, configs: &Configs) -> Response {
+fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Configs) -> Response {
     let content_type: &'static str;
 
     let body = 'match_uri: {
@@ -336,10 +354,11 @@ fn handle_get(uri: Uri, headers: Headers, database: &Database, configs: &Configs
             "/data/songs.csv" => break 'match_uri {
                 content_type = "text/csv";
                 CsvObject::serialize(
-                    database.get_songs_css(),
+                    database.get_songs_csv(),
                     DEFAULT_SEPARATOR,
                 ).into_bytes()
             },
+            "/data/server_time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
             _ => return Response::not_found(),
         }.to_vec()
     };
@@ -362,7 +381,7 @@ macro_rules! csv_from_utf8_or_return {
     };
 }
 
-fn handle_post(uri: Uri, headers: Headers, body: Body, database: &mut Database, configs: &mut Configs) -> Response {
+fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database, configs: &mut Configs) -> Response {
     // println!("URI: {:?}\nHeaders:\n{}Body length: {}\n", uri, headers.join("\n"), body.len());
 
     // println!("{:?}", String::from_utf8(body.clone()).or::<()>(Ok("".to_string())));
@@ -385,6 +404,16 @@ fn handle_post(uri: Uri, headers: Headers, body: Body, database: &mut Database, 
             );
 
             Response::ok("Timetable successfully set".into())
+        },
+        "/api/set-utc-offset" => {
+            match str::from_utf8(body.as_slice()).ok().and_then(|s| str::parse::<i8>(s).ok()) {
+                Some(n @ -12..12) => {
+                    unsafe { configs.set_utc_offset_unchecked(n); }
+                    Response::ok("UTC offset successfully set".into())
+                },
+                Some(_) => Response::unprocessable_request(),
+                None => Response::bad_request()
+            }
         },
         "/api/disable-songs" => {
             let mut success: u16 = 0;
@@ -452,6 +481,35 @@ fn handle_post(uri: Uri, headers: Headers, body: Body, database: &mut Database, 
                 Response::new(404, "Not Found", Vec::new(), "All requests failed.".as_bytes().to_vec()).unwrap()
             } else {
                 Response::ok(format!("{} successfully enabled", success).as_bytes().to_vec())
+            }
+        },
+        "/api/play-songs" => {
+            let mut success: u16 = 0;
+
+            let host = cpal::default_host();
+            let device = or_return!(host.default_output_device(), Response::internal_server_error());
+
+            let mut songs = Vec::new();
+
+            for name in (
+                or_return!(
+                    csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
+                        .into_iter()
+                        .take(1)
+                        .next(),
+                    Response::bad_request()
+                ).iter().filter_map(|v| v.as_string())
+            ) {
+                songs.push(or_continue!(Song::new(Path::new(name))));
+                success += 1;
+            }
+
+            std::thread::spawn(move || songs::play_playlist(&songs));
+
+            if success == 0 {
+                Response::new(404, "Not Found", Vec::new(), "All requests failed.".as_bytes().to_vec()).unwrap()
+            } else {
+                Response::ok(format!("{} successfully played", success).as_bytes().to_vec())
             }
         },
         "/api/delete-songs" => {

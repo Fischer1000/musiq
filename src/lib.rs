@@ -6,11 +6,14 @@
 use std::convert::Infallible;
 use std::io::Write;
 use std::net::{TcpListener, ToSocketAddrs};
+use std::path::Path;
 
 use crate::time::{Time, Day};
 
 pub static SONG_FILES_DIR: &str = ".\\songs\\";
 pub static CONFIG_FILE_PATH: &str = ".\\config.musiq";
+pub static DATABASE_FILE_NAME: &str = "db.csv";
+pub const PLAYLIST_LENGTH: usize = 1;
 
 pub mod songs;
 mod macros;
@@ -21,17 +24,103 @@ pub mod embedded_files;
 pub mod csv;
 pub mod time;
 
-/// Runs the main loop, which then calls handles for TCP requests, and handles time-related events.
-pub fn main_loop<A: ToSocketAddrs>(
+#[derive(Debug)]
+#[non_exhaustive]
+pub enum Error {
+    CannotBind,
+    CannotSetNonblocking,
+    RequestReadFailed,
+    InvalidRequest,
+    CannotInferLength,
+    InvalidUtf8,
+    UnsupportedMethod,
+    BodyTooLarge,
+    InvalidConfigFile,
+    DatabaseDirectoryCannotBeRead,
+    DatabaseFileCannotBeRead,
+    InvalidDatabaseFile,
+    ConfigFileCannotBeRead,
+    CannotReadFile,
+    NoTimetableFound,
+    CannotWriteFile,
+    DirectoryCannotBeRead,
+    CannotCopyNewFile,
+    InvalidNewFileName,
+    EntryCreationFailed,
+    EntryAlreadyExists,
+    PathCannotBeCanonicalized,
+    FileCannotBeDeleted,
+    InvalidCSV,
+    DeviceConfigCannotBeSet,
+    StreamCannotBeBuilt,
+    StreamCannotBePlayed,
+    NoOutputDevice
+}
+
+/// Sets up the program and runs the main loop,
+/// which then calls handles for TCP requests, and handles time-related events.
+pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
     addr: A,
-    mut database: database::SongDatabase,
-    mut configs: config::Configs
-) -> Result<Infallible, webserver::Error> {
-    let listener = TcpListener::bind(addr).map_err(|_| webserver::Error::CannotBind)?;
-    listener.set_nonblocking(true).map_err(|_| webserver::Error::CannotSetNonblocking)?;
+    // mut database: database::SongDatabase,
+    database_path: P,
+    database_filter: F,
+    // mut configs: config::Configs
+    config_file_path: P
+) -> Result<Infallible, Error> {
+    let listener = TcpListener::bind(&addr).map_err(|_| Error::CannotBind)?;
+    listener.set_nonblocking(true).map_err(|_| Error::CannotSetNonblocking)?;
+
+    let database_path = database_path.as_ref();
+    let database_file_name = database_path.join(DATABASE_FILE_NAME);
+
+    let mut database = match database::SongDatabase::from_directory_filtered(database_path, database_filter) {
+        Ok(database) => database,
+        Err(e) => {
+            match e {
+                Error::DirectoryCannotBeRead => {
+                    eprintln!("The directory of the songs cannot be read.\nTerminating...");
+                }
+                _ => eprintln!("Unexpected error while trying to read the songs directory.\nTerminating...")
+            }
+            return Err(Error::DatabaseDirectoryCannotBeRead);
+        }
+    };
+
+    or_return!(
+        database.update_from_csv(
+            csv::CsvObject::from_str(
+                or_return!(
+                    str::from_utf8(
+                        or_return!(
+                            std::fs::read(&database_file_name).ok(),
+                            Err(Error::DatabaseFileCannotBeRead)
+                        ).as_slice()
+                    ).ok(),
+                    Err(Error::InvalidDatabaseFile)),
+                csv::DEFAULT_SEPARATOR
+            )
+        ).ok(),
+        Err(Error::InvalidDatabaseFile)
+    );
+
+    let mut configs = match config::Configs::read_from_file(&config_file_path) {
+        Ok(configs) => configs,
+        Err(_) => {
+            std::fs::write(&config_file_path, embedded_files::CONFIG_MUSIQ).unwrap();
+            eprintln!(
+                "Config file cannot be read or is invalid. A default one was created at \"{}\".\nTerminating...",
+                CONFIG_FILE_PATH
+            );
+            return Err(Error::ConfigFileCannotBeRead);
+        }
+    };
+
+    let mut song_play_handle: Option<std::thread::JoinHandle<_>> = None;
 
     loop {
         if let Ok((mut stream, _)) = listener.accept() {
+            stream.set_nonblocking(false).map_err(|_| Error::CannotSetNonblocking)?;
+
             let response = webserver::handle_request(
                 webserver::Request::from_stream(&stream),
                 &mut database,
@@ -39,21 +128,36 @@ pub fn main_loop<A: ToSocketAddrs>(
             );
 
             let _ = stream.write_all(response.as_bytes().as_slice());
-        };
 
-        'action: { if let Some(action) = configs.timetable().action(
-            &Time::now(configs.utc_offset()),
-            &Day::today(configs.utc_offset())
-        ) {
-            if !action { break 'action }
-            let playlist = or!(songs::compose_playlist(1, &database), break 'action);
+            let _ = configs.save_to_file(&config_file_path);
 
-            let _ = std::thread::spawn(move || { songs::play(&playlist) });
-        }}
+            let _ = std::fs::write(
+                &database_file_name,
+                csv::CsvObject::serialize(
+                    database.get_songs_csv(),
+                    csv::DEFAULT_SEPARATOR
+                )
+            );
+        }
+
+        if 'a: { or!(&song_play_handle, break 'a true).is_finished() } {
+            'action: { if let Some(action) = configs.timetable().action(
+                &Time::now(configs.utc_offset()),
+                &Day::today(configs.utc_offset())
+            ) {
+                if !action { break 'action }
+                let playlist = or!(songs::compose_playlist(PLAYLIST_LENGTH, &mut database), break 'action);
+
+                song_play_handle = Some(std::thread::spawn(move || { songs::play_playlist(&playlist) }));
+            }}
+        }
+
     }
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
 }
+*/

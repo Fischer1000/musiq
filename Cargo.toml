@@ -1,7 +1,9 @@
 [package]
 name = "musiq"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
+cpal = "0.16.0"
+minimp3 = "0.6.1"
 rand = "0.9.2"

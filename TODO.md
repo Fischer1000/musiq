@@ -1,9 +1,9 @@
 # Things to be done
 
-1. API for playing a song.
-2. Handling a database of songs
-3. API for registering a new song.
-4. Handling a timetable for scheduled plays.
-5. Serving an admin webpage, 
-on which the configs can be edited
-and temporary rules can be added
+1. Adding the ability to select all minutes of a day at break time selection.
+2. Having a global variable in which the state of the currently playing song is stored if any.
+5. Adding nameday announcements.
+6. Having authorization on the webpage in the form of an API key.
+
+# Bugs to be fixed
+1. Restricting new song playing from the web UI to only start when nothing is playing.

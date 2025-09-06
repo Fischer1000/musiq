@@ -93,7 +93,10 @@ macro_rules! stat {
     };
     ($msg:literal) => {
         println!("[{}:{}:{}]: {}", file!(), line!(), column!(), $msg);
-    }
+    };
+    ($msg:ident) => {
+        println!("[{}:{}:{}]: {:?}", file!(), line!(), column!(), $msg);
+    };
 }
 
 #[macro_export]

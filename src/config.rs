@@ -1,4 +1,6 @@
 use std::path::Path;
+
+use crate::Error;
 use crate::csv::CsvObject;
 use crate::{int_to_bool, is_kind_of, or_return, return_unless, stat};
 use crate::time::{Day, Time};
@@ -12,7 +14,7 @@ pub struct Configs {
 
 #[allow(unreachable_code)]
 impl Configs {
-    pub fn read_from_file<P: AsRef<Path>>(path: P) -> ConfigResult<Configs> {
+    pub fn read_from_file<P: AsRef<Path>>(path: P) -> Result<Configs, Error> {
         let contents = or_return!(std::fs::read(&path).ok(), Err(Error::CannotReadFile));
 
         if contents.get(0..=5) != Some(b"MUSIQ\n") {
@@ -52,10 +54,13 @@ impl Configs {
         Ok(Configs { timetable, utc_offset, file_path: Box::from(path.as_ref()) })
     }
 
-    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> ConfigResult<()> {
+    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {
         let mut contents = b"MUSIQ\nT".to_vec();
 
         contents.append(&mut self.timetable.to_bytes());
+
+        contents.push(b'O');
+        contents.push(self.utc_offset as u8);
 
         or_return!(std::fs::write(path, contents).ok(), Err(Error::CannotWriteFile));
 
@@ -220,7 +225,7 @@ impl Timetable {
 
     /// Returns `Option<true>` when a break should start and `Option<false>` when it should end.
     pub fn action(&self, time: &Time, day: &Day) -> Option<bool> {
-        let break_enabled = self.days[day.as_day_number() as usize].to_bools();
+        let break_enabled = self.days.get(day.as_day_number() as usize)?.to_bools();
 
         for i in 0..8 {
             if !break_enabled[i] { continue; }
@@ -427,6 +432,7 @@ impl std::fmt::Display for DailySchedule {
     }
 }
 
+/*
 #[derive(Debug)]
 pub enum Error {
     CannotReadFile,
@@ -436,3 +442,4 @@ pub enum Error {
 }
 
 type ConfigResult<T> = Result<T, Error>;
+*/

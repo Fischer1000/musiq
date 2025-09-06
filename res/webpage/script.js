@@ -4,6 +4,7 @@ const songListTable = document.getElementById('song-list-table');
 const disableSongs = document.getElementById('disable-selected');
 const enableSongs = document.getElementById('enable-selected');
 const deleteSongs = document.getElementById('delete-selected');
+const playSongs = document.getElementById('play-selected');
 const timetableForm = document.getElementById('timetable');
 const addSongForm = document.getElementById('add-song-form');
 
@@ -34,7 +35,16 @@ songInput.addEventListener('change', function () {
 songListTable.addEventListener('click', function (e) {
     let row = e.target.closest('tr');
     row.classList.toggle('active');
-    selectedSongs.push(row.id.slice(5));
+
+    let filename = row.id.slice(5);
+
+    let arrayIndex =selectedSongs.indexOf(filename);
+
+    if (arrayIndex === -1) {
+        selectedSongs.push(filename);
+    } else {
+        selectedSongs.splice(arrayIndex, 1);
+    }
 });
 
 // Disable selected songs
@@ -103,6 +113,28 @@ deleteSongs.addEventListener('click', function (e) {
     if (!noRefresh) { location.reload(); }
 });
 
+// Delete selected songs
+playSongs.addEventListener('click', function (e) {
+    if (selectedSongs.length === 0) {
+        return;
+    }
+
+    const response = fetch(
+        "/api/play-songs", {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: arrayToCsv(selectedSongs)
+        });
+
+    if (!(response.ok || (response.status === undefined))) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    if (!noRefresh) { location.reload(); }
+});
+
 timetableForm.addEventListener("submit", e => {
     customSubmit(e, () => { if (!noRefresh) { location.reload(); } })
 });
@@ -123,6 +155,7 @@ function customSubmit(event, callback = () => {}) {
 
     const checkboxes = document.querySelectorAll("#timetable input[type=checkbox]");
     const times = document.querySelectorAll("#timetable input[type=time]");
+    const offset = document.getElementById("utc-offset");
 
     const checkboxLines = [];
     for (let row = 0; row < 8; row++) {
@@ -162,7 +195,7 @@ function customSubmit(event, callback = () => {}) {
         })
         .then(() => {
             finished++;
-            if (finished === 2) {
+            if (finished === 3) {
                 callback();
             }
         });
@@ -180,7 +213,25 @@ function customSubmit(event, callback = () => {}) {
         })
         .then(() => {
             finished++;
-            if (finished === 2) {
+            if (finished === 3) {
+                callback();
+            }
+        });
+
+    fetch("/api/set-utc-offset", {
+        method: form.method,
+        body: String(offset.value)
+    })
+        .then(response => response.text())
+        .then(data => {
+            console.log("Server response:", data);
+        })
+        .catch(error => {
+            console.error("Error:", error);
+        })
+        .then(() => {
+            finished++;
+            if (finished === 3) {
                 callback();
             }
         });
