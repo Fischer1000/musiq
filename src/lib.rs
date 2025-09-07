@@ -86,32 +86,38 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
         }
     };
 
-    or_return!(
-        database.update_from_csv(
-            csv::CsvObject::from_str(
-                or_return!(
-                    str::from_utf8(
-                        or_return!(
-                            std::fs::read(&database_file_name).ok(),
-                            Err(Error::DatabaseFileCannotBeRead)
-                        ).as_slice()
-                    ).ok(),
-                    Err(Error::InvalidDatabaseFile)),
-                csv::DEFAULT_SEPARATOR
-            )
-        ).ok(),
-        Err(Error::InvalidDatabaseFile)
-    );
+    'database_file: {
+        or_return!(
+            database.update_from_csv(
+                csv::CsvObject::from_str(
+                    or_return!(
+                        str::from_utf8(
+                            or!(
+                                std::fs::read(&database_file_name).ok(),
+                                break 'database_file
+                            ).as_slice()
+                        ).ok(),
+                        Err(Error::InvalidDatabaseFile)),
+                    csv::DEFAULT_SEPARATOR
+                )
+            ).ok(),
+            Err(Error::InvalidDatabaseFile)
+        );
+    }
 
     let mut configs = match config::Configs::read_from_file(&config_file_path) {
         Ok(configs) => configs,
-        Err(_) => {
-            std::fs::write(&config_file_path, embedded_files::CONFIG_MUSIQ).unwrap();
-            eprintln!(
-                "Config file cannot be read or is invalid. A default one was created at \"{}\".\nTerminating...",
-                CONFIG_FILE_PATH
-            );
-            return Err(Error::ConfigFileCannotBeRead);
+        Err(e) => {
+            match e {
+                Error::CannotReadFile => {
+                    std::fs::write(&config_file_path, embedded_files::CONFIG_MUSIQ).unwrap();
+                    config::Configs::from_bytes(embedded_files::CONFIG_MUSIQ, &config_file_path).unwrap()
+                },
+                _ => {
+                    eprintln!("Config file is invalid.\nTerminating...");
+                    return Err(Error::InvalidConfigFile);
+                }
+            }
         }
     };
 

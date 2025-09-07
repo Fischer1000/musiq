@@ -17,7 +17,11 @@ impl Configs {
     pub fn read_from_file<P: AsRef<Path>>(path: P) -> Result<Configs, Error> {
         let contents = or_return!(std::fs::read(&path).ok(), Err(Error::CannotReadFile));
 
-        if contents.get(0..=5) != Some(b"MUSIQ\n") {
+        Self::from_bytes(&contents, path)
+    }
+
+    pub fn from_bytes<P: AsRef<Path>>(bytes: &[u8], file_path: P) -> Result<Configs, Error> {
+        if bytes.get(0..=5) != Some(b"MUSIQ\n") {
             return Err(Error::InvalidConfigFile);
         }
 
@@ -25,10 +29,10 @@ impl Configs {
         let mut utc_offset: Option<i8> = None;
 
         let mut i = 6;
-        'search: while i < contents.len() {
-            match contents.get(i) {
+        'search: while i < bytes.len() {
+            match bytes.get(i) {
                 Some(b'T') => {
-                    timetable = Timetable::from_bytes(contents
+                    timetable = Timetable::from_bytes(bytes
                         .get((i + 1)..=(i + 21))
                         .ok_or(Error::InvalidConfigFile)?
                     );
@@ -36,7 +40,7 @@ impl Configs {
                     continue 'search;
                 },
                 Some(b'O') => {
-                    utc_offset = Some(*contents.get(i + 1)
+                    utc_offset = Some(*bytes.get(i + 1)
                         .ok_or(Error::InvalidConfigFile)? as i8);
                     i += 2;
                     continue 'search;
@@ -51,7 +55,7 @@ impl Configs {
         let timetable = timetable.ok_or(Error::NoTimetableFound)?;
         let utc_offset = utc_offset.ok_or(Error::NoTimetableFound)?;
 
-        Ok(Configs { timetable, utc_offset, file_path: Box::from(path.as_ref()) })
+        Ok(Configs { timetable, utc_offset, file_path: Box::from(file_path.as_ref()) })
     }
 
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), Error> {

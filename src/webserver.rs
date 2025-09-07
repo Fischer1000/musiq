@@ -289,6 +289,15 @@ impl Response {
             body: Vec::new()
         }
     }
+
+    pub fn permanent_redirect(to: &str) -> Response {
+        Response {
+            status_code: Self::store_status_code(308).unwrap(),
+            reason: "Permanent Redirect".into(),
+            headers: vec![format!("Location: {to}")],
+            body: Vec::new()
+        }
+    }
 }
 
 type Database = crate::database::SongDatabase;
@@ -378,7 +387,8 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                     DEFAULT_SEPARATOR,
                 ).into_bytes()
             },
-//            "/data/server_time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
+            #[cfg(feature = "debug-access")]
+            "/data/server_time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
             _ => return Response::not_found(),
         }.to_vec()
     };
