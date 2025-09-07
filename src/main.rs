@@ -13,7 +13,7 @@ use musiq::embedded_files;
 use musiq::or_return;
 
 static SUPPORTED_EXTENSIONS: &[&str] = &["mp3"];
-static HOST_ADDRESS: &str = "localhost:80";
+// static HOST_ADDRESS: &str = "localhost:80";
 
 fn has_allowed_extension(s: &songs::Song) -> bool {
     SUPPORTED_EXTENSIONS.contains(
@@ -58,8 +58,16 @@ fn main() {
     webserver::start_server("localhost:7878", webserver::handle_request, database, configs).unwrap();
     */
 
-    match musiq::main(HOST_ADDRESS, musiq::SONG_FILES_DIR, has_allowed_extension, musiq::CONFIG_FILE_PATH) {
+    let port = if let Some(port) = std::env::args().skip(1).next() {
+        port
+    } else {
+        "80".to_string()
+    };
+
+    let host_address = format!("localhost:{}", port);
+
+    match musiq::main(host_address, musiq::SONG_FILES_DIR, has_allowed_extension, musiq::CONFIG_FILE_PATH) {
         Ok(_) => unreachable!(),
-        Err(_err) => ()
+        Err(err) => println!("Program exited with error {err:?}")
     }
 }

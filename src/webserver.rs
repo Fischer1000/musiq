@@ -330,15 +330,33 @@ pub fn handle_request(request: Result<Request, Error>, database: &mut Database, 
 
 fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Configs) -> Response {
     let content_type: &'static str;
+    let mut content_encoding: Option<&'static str>;
 
     let body = 'match_uri: {
         match uri.without_query_parameters() {
-            "/" => { content_type = "text/html"; embedded_files::INDEX_HTML },
-            "/files/styles.css" => { content_type = "text/css"; embedded_files::STYLES_CSS },
-            "/files/script.js" => { content_type = "text/javascript"; embedded_files::SCRIPT_JS },
-            "/files/favicon.svg" => { content_type = "image/svg+xml"; embedded_files::FAVICON_SVG },
+            "/" => {
+                content_type = "text/html";
+                content_encoding = Some("br");
+                embedded_files::INDEX_HTML_BR
+            },
+            "/files/styles.css" => {
+                content_type = "text/css";
+                content_encoding = Some("br");
+                embedded_files::STYLES_CSS_BR
+            },
+            "/files/script.js" => {
+                content_encoding = Some("br");
+                content_type = "text/javascript";
+                embedded_files::SCRIPT_JS_BR
+            },
+            "/files/favicon.svg" => {
+                content_type = "image/svg+xml";
+                content_encoding = Some("br");
+                embedded_files::FAVICON_SVG_BR
+            },
             "/data/timetable.csv" => break 'match_uri {
                 content_type = "text/csv";
+                content_encoding = None;
                 CsvObject::serialize(
                     configs.get_timetable_csv(),
                     DEFAULT_SEPARATOR,
@@ -346,6 +364,7 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
             },
             "/data/breaks.csv" => break 'match_uri {
                 content_type = "text/csv";
+                content_encoding = None;
                 CsvObject::serialize(
                     configs.get_breaks_csv(),
                     DEFAULT_SEPARATOR,
@@ -353,18 +372,25 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
             },
             "/data/songs.csv" => break 'match_uri {
                 content_type = "text/csv";
+                content_encoding = None;
                 CsvObject::serialize(
                     database.get_songs_csv(),
                     DEFAULT_SEPARATOR,
                 ).into_bytes()
             },
-            "/data/server_time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
+//            "/data/server_time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
             _ => return Response::not_found(),
         }.to_vec()
     };
 
-    let headers = vec![format!("Content-Type: {}", content_type)];
-    // let headers = vec![];
+    let mut headers = vec![
+        format!("Content-Type: {}", content_type),
+        format!("Content-Length: {}", body.len()),
+    ];
+
+    if let Some(content_encoding) = content_encoding {
+        headers.push(format!("Content-Encoding: {}", content_encoding));
+    }
 
     Response::new(200, "OK", headers, body).unwrap()
 }

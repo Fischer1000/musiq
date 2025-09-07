@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="248"
+   height="248"
+   version="1.1"
+   overflow="visible"
+   id="svg11"
+   sodipodi:docname="Musical_notes.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview11"
+     pagecolor="#505050"
+     bordercolor="#ffffff"
+     borderopacity="1"
+     inkscape:showpageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="1"
+     inkscape:deskcolor="#505050" />
+  <defs
+     id="defs2">
+    <symbol
+       id="E0A4"
+       viewBox="0 0 1000 1000"
+       overflow="inherit">
+      <g
+         transform="scale(1,-1)"
+         id="g2">
+        <path
+           d="m 0,-39 c 0,68 73,172 200,172 66,0 114,-37 114,-95 0,-84 -106,-171 -218,-171 -64,0 -96,30 -96,94 z"
+           id="path2" />
+      </g>
+    </symbol>
+  </defs>
+  <g
+     id="g12"
+     transform="translate(4,4)">
+    <circle
+       style="font-variation-settings:'wdth' 87, 'wght' 600;fill:#f9f6e6;fill-opacity:1;stroke:#1a1a1a;stroke-width:8;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+       id="path12"
+       cx="120"
+       cy="120"
+       r="120"
+       inkscape:label="path12" />
+    <g
+       class="beam"
+       id="beam-000000158457582"
+       style="fill:#1a1a1a;fill-opacity:1;stroke:#000000;stroke-opacity:1"
+       transform="matrix(0.2083027,0,0,0.2083027,-141.01161,-71.234377)">
+      <g
+         class="note"
+         id="note-000000002570074"
+         style="fill:#1a1a1a">
+        <use
+           xlink:href="#E0A4"
+           x="915"
+           y="1230"
+           height="720"
+           width="720"
+           id="use9"
+           style="fill:#1a1a1a" />
+      </g>
+      <g
+         class="note"
+         id="note-000000028794960"
+         style="fill:#1a1a1a">
+        <use
+           xlink:href="#E0A4"
+           x="1365"
+           y="1140"
+           height="720"
+           width="720"
+           id="use10"
+           style="fill:#1a1a1a" />
+      </g>
+      <path
+         d="M 1131,1208 V 576"
+         style="fill:#1a1a1a;stroke-width:20"
+         id="path10" />
+      <path
+         d="M 1581,1118 V 530"
+         style="fill:#1a1a1a;stroke-width:19.9997;stroke-dasharray:none"
+         id="path11" />
+      <polygon
+         style="fill:#1a1a1a;fill-rule:nonzero"
+         stroke-width="0"
+         points="1591,600 1121,646 1121,556 1591,510 "
+         id="polygon11" />
+    </g>
+  </g>
+</svg>

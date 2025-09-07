@@ -1,7 +1,7 @@
-pub static INDEX_HTML: &'static [u8] = include_bytes!("../res/webpage/index.html");
-pub static STYLES_CSS: &'static [u8] = include_bytes!("../res/webpage/styles.css");
-pub static SCRIPT_JS: &'static [u8] = include_bytes!("../res/webpage/script.js");
-pub static FAVICON_SVG: &'static [u8] = /*include_bytes!("../res/webpage/favicon.ico")*/ &[];
+pub static INDEX_HTML_BR: &'static [u8] = include_bytes!(concat!(env!("OUT_DIR"), "/index.html.br"));
+pub static STYLES_CSS_BR: &'static [u8] = include_bytes!(concat!(env!("OUT_DIR"), "/styles.css.br"));
+pub static SCRIPT_JS_BR: &'static [u8] = include_bytes!(concat!(env!("OUT_DIR"), "/script.js.br"));
+pub static FAVICON_SVG_BR: &'static [u8] = include_bytes!(concat!(env!("OUT_DIR"), "/favicon.svg.br"));
 
 
 pub static CONFIG_MUSIQ: &'static [u8] =
