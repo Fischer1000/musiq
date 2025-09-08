@@ -29,10 +29,8 @@ pub struct SongDatabase {
 
 impl SongDatabase {
     fn get_directory_contents<P: AsRef<Path>>(path: P) -> Result<impl Iterator<Item = Box<Path>>, Error> {
-        use Error::DirectoryCannotBeRead;
-
         Ok(read_dir(&path)
-            .map_err(|_| DirectoryCannotBeRead)?
+            .map_err(|_| Error::DirectoryCannotBeRead)?
             .filter_map(|e| e.ok())
             .filter(|e| {
                 !or_return!(e.metadata().ok(), false)

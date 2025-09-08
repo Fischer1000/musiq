@@ -10,8 +10,8 @@ use std::path::Path;
 
 use crate::time::{Time, Day};
 
-pub static SONG_FILES_DIR: &str = ".\\songs\\";
-pub static CONFIG_FILE_PATH: &str = ".\\config.musiq";
+pub static SONG_FILES_DIR: &str = "./songs/";
+pub static CONFIG_FILE_PATH: &str = "./config.musiq";
 pub static DATABASE_FILE_NAME: &str = "db.csv";
 pub const PLAYLIST_LENGTH: usize = 1;
 
@@ -72,6 +72,8 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
 
     let database_path = database_path.as_ref();
     let database_file_name = database_path.join(DATABASE_FILE_NAME);
+
+    let _ = std::fs::create_dir(SONG_FILES_DIR);
 
     let mut database = match database::SongDatabase::from_directory_filtered(database_path, database_filter) {
         Ok(database) => database,
