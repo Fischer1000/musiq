@@ -14,6 +14,7 @@ pub static SONG_FILES_DIR: &str = "./songs/";
 pub static CONFIG_FILE_PATH: &str = "./config.musiq";
 pub static DATABASE_FILE_NAME: &str = "db.csv";
 pub const PLAYLIST_LENGTH: usize = 1;
+pub const TIMEOUT: Option<core::time::Duration> = Some(core::time::Duration::from_secs(1));
 
 pub mod songs;
 mod macros;
@@ -129,8 +130,8 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
         if let Ok((mut stream, _)) = listener.accept() {
             stream.set_nonblocking(false).map_err(|_| Error::CannotSetNonblocking)?;
 
-            let _ = stream.set_read_timeout(Some(core::time::Duration::new(1, 0)));
-            let _ = stream.set_write_timeout(Some(core::time::Duration::new(1, 0)));
+            let _ = stream.set_read_timeout(TIMEOUT);
+            let _ = stream.set_write_timeout(TIMEOUT);
 
             let response = webserver::handle_request(
                 webserver::Request::from_stream(&stream),

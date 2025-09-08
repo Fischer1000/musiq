@@ -5,7 +5,7 @@ extern crate cpal;
 use std::ffi::OsStr;
 use std::io::BufReader;
 use std::path::Path;
-use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+use std::sync::{Arc, atomic::{AtomicUsize, Ordering}, Mutex};
 
 use rand::{rng, seq::SliceRandom};
 use minimp3::{Decoder, Frame};
@@ -15,6 +15,9 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use crate::database::SongDatabase;
 use crate::{or, or_return, stat};
 use crate::Error;
+
+/// Block a thread while a song is playing with this Mutex
+pub static SONG_PLAYING_GATE: Mutex<()> = Mutex::new(());
 
 #[derive(Debug, Eq, Clone)]
 pub struct Song {
@@ -68,6 +71,8 @@ impl Song {
         self.metadata &= !2
     }
 
+    /// Plays this song
+    /// # Warning this method blocks until the currently playing song is done playing
     pub fn play(&self, device: &Device) -> Result<(), Error> {
         let file_path = Path::new(crate::SONG_FILES_DIR).join(self.filename.as_ref());
 
@@ -90,6 +95,8 @@ impl Song {
         let config = or_return!(device.default_output_config().ok(), Err(Error::DeviceConfigCannotBeSet));
         let sample_format = config.sample_format();
         let config = config.into();
+
+        let _guard = SONG_PLAYING_GATE.lock().unwrap(); // Unwrap so that panics cascade over threads
 
         let stream = or_return!(match sample_format {
             cpal::SampleFormat::F32 => device.build_output_stream(
