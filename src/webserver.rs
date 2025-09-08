@@ -345,23 +345,23 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
         match uri.without_query_parameters() {
             "/" => {
                 content_type = "text/html";
-                content_encoding = Some("br");
-                embedded_files::INDEX_HTML_BR
+                content_encoding = if cfg!(feature = "use-encoding") { Some("br") } else { None };
+                embedded_files::INDEX_HTML
             },
             "/files/styles.css" => {
                 content_type = "text/css";
-                content_encoding = Some("br");
-                embedded_files::STYLES_CSS_BR
+                content_encoding = if cfg!(feature = "use-encoding") { Some("br") } else { None };
+                embedded_files::STYLES_CSS
             },
             "/files/script.js" => {
-                content_encoding = Some("br");
                 content_type = "text/javascript";
-                embedded_files::SCRIPT_JS_BR
+                content_encoding = if cfg!(feature = "use-encoding") { Some("br") } else { None };
+                embedded_files::SCRIPT_JS
             },
             "/files/favicon.svg" => {
                 content_type = "image/svg+xml";
-                content_encoding = Some("br");
-                embedded_files::FAVICON_SVG_BR
+                content_encoding = if cfg!(feature = "use-encoding") { Some("br") } else { None };
+                embedded_files::FAVICON_SVG
             },
             "/data/timetable.csv" => break 'match_uri {
                 content_type = "text/csv";

@@ -1,3 +1,9 @@
+# 0.2.4
+- Moved HTTP content encoding behind a feature called `use-encoding`
+- Fixed a bug on Linux machines, where the songs' directory cannot have been resolved
+- Fixed a bug where the web UI was only accessible from the same machine
+as it was hosted on
+- Small internal changes
 # 0.2.3
 - Fix for Linux systems not being able to open the songs' directory
 - Added the automatic creation of a song directory if there was none detected

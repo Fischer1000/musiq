@@ -1,10 +1,11 @@
 [package]
 name = "musiq"
-version = "0.2.3"
+version = "0.2.4"
 edition = "2024"
 
 [features]
 debug-access = []
+use-encoding = []
 
 [dependencies]
 cpal = "0.16.0"
