@@ -64,7 +64,7 @@ fn main() {
         "80".to_string()
     };
 
-    let host_address = format!("localhost:{}", port);
+    let host_address = format!("0.0.0.0:{}", port);
 
     match musiq::main(host_address, musiq::SONG_FILES_DIR, has_allowed_extension, musiq::CONFIG_FILE_PATH) {
         Ok(_) => unreachable!(),

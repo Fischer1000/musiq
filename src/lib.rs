@@ -129,6 +129,9 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
         if let Ok((mut stream, _)) = listener.accept() {
             stream.set_nonblocking(false).map_err(|_| Error::CannotSetNonblocking)?;
 
+            let _ = stream.set_read_timeout(Some(core::time::Duration::new(1, 0)));
+            let _ = stream.set_write_timeout(Some(core::time::Duration::new(1, 0)));
+
             let response = webserver::handle_request(
                 webserver::Request::from_stream(&stream),
                 &mut database,
