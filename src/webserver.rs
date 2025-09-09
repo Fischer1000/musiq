@@ -522,9 +522,6 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
         "/api/play-songs" => {
             let mut success: u16 = 0;
 
-            let host = cpal::default_host();
-            let device = or_return!(host.default_output_device(), Response::internal_server_error());
-
             let mut songs = Vec::new();
 
             for name in (

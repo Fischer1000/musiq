@@ -1,3 +1,6 @@
+# 0.3.0
+- Some bugfixes
+- Added a feature whether to use a local-to-machine or a local-on-network address
 # 0.2.4
 - Moved HTTP content encoding behind a feature called `use-encoding`
 - Fixed a bug on Linux machines, where the songs' directory cannot have been resolved
