@@ -1,3 +1,11 @@
+# 3.0.1
+- All seconds of the day can now be selected at break time selection
+- Added a built in `config.musiq` generator
+- Changed the format of `config.musiq`
+- Internal refactorings
+- Some bugfixes
+- The server now sends second information too at `/data/breaks.csv`
+- `build.rs` now runs every time (temporal solution)
 # 0.3.0
 - Some bugfixes
 - Added a feature whether to use a local-to-machine or a local-on-network address

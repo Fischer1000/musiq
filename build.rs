@@ -41,6 +41,4 @@ fn main() {
             std::fs::copy(file_in, file_out).unwrap();
         }
     }
-
-    println!("cargo::rerun-if-changed=build.rs");
 }

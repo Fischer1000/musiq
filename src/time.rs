@@ -34,19 +34,19 @@ impl Time {
 
     /// Returns the stored time's current seconds.
     #[inline]
-    pub fn seconds(&self) -> u32 {
+    pub const fn seconds(&self) -> u32 {
         self.data % Self::SECS_PER_MIN
     }
 
     /// Returns the stored time's current minute.
     #[inline]
-    pub fn minutes(&self) -> u32 {
+    pub const fn minutes(&self) -> u32 {
         (self.data / Self::SECS_PER_MIN) % Self::MINS_PER_HOUR
     }
 
     /// Returns the stored time's current hour.
     #[inline]
-    pub fn hours(&self) -> u32 {
+    pub const fn hours(&self) -> u32 {
         self.data / Self::SECS_PER_HOUR
     }
 
@@ -61,12 +61,21 @@ impl Time {
     }
 
     /// Converts hours, minutes, and seconds into the internal representation and stores it.
-    pub fn from_hms(hours: u8, minutes: u8, seconds: u8) -> Option<Time> {
+    pub const fn from_hms(hours: u8, minutes: u8, seconds: u8) -> Option<Time> {
         if hours   as u32 >= Self::HOURS_PER_DAY { return None }
         if minutes as u32 >= Self::MINS_PER_HOUR { return None }
         if seconds as u32 >= Self::SECS_PER_MIN  { return None }
 
         Some(Time { data: ((hours as u32 * Self::MINS_PER_HOUR) + minutes as u32) * Self::SECS_PER_MIN + (seconds as u32) })
+    }
+
+    pub const fn from_seconds(seconds: u32) -> Time {
+        Time { data: seconds % Self::SECS_PER_DAY }
+    }
+
+    /// Returns the elapsed seconds on the stored day
+    pub const fn elapsed_seconds(&self) -> u32 {
+        self.data % Self::SECS_PER_DAY
     }
 }
 

@@ -1,8 +1,8 @@
 use std::path::Path;
-
 use crate::Error;
 use crate::csv::CsvObject;
 use crate::{int_to_bool, is_kind_of, or_return, return_unless, stat};
+use crate::embedded_files::CONFIG_MUSIQ;
 use crate::time::{Day, Time};
 
 #[derive(Debug)]
@@ -29,23 +29,21 @@ impl Configs {
         let mut utc_offset: Option<i8> = None;
 
         let mut i = 6;
-        'search: while i < bytes.len() {
+        '_search: while i < bytes.len() {
             match bytes.get(i) {
                 Some(b'T') => {
                     timetable = Timetable::from_bytes(bytes
-                        .get((i + 1)..=(i + 21))
+                        .get((i + 1)..=(i + 45))
                         .ok_or(Error::InvalidConfigFile)?
                     );
-                    i += 22;
-                    continue 'search;
+                    i += 45;
                 },
                 Some(b'O') => {
                     utc_offset = Some(*bytes.get(i + 1)
                         .ok_or(Error::InvalidConfigFile)? as i8);
-                    i += 2;
-                    continue 'search;
+                    i += 1;
                 },
-                Some(_) => todo!(),
+                Some(_) => return Err(Error::InvalidConfigFile),
                 None => return Err(Error::InvalidConfigFile),
             }
 
@@ -150,24 +148,20 @@ pub struct Timetable {
 
 impl Timetable {
     pub fn from_bytes(bytes: &[u8]) -> Option<Timetable> {
-        return_unless!(bytes.len() == 21, None);
+        return_unless!(bytes.len() == 45, None);
 
         let breaks = bytes
-            .get(0..=15)?
-            .chunks_exact(2)
+            .get(0..40)?
+            .chunks_exact(5)
             .filter_map(|x| {
-                if let [a, b] = x {
-                    Break::from_bytes(*a, *b)
-                } else {
-                    unreachable!()
-                }
+                Break::from_bytes(x.try_into().expect("This should not fail"))
             })
             .collect::<Vec<Break>>()
             .try_into()
             .ok()?;
 
         let days = bytes
-            .get(16..=20)?
+            .get(40..45)?
             .iter()
             .map(DailySchedule::from_byte)
             .collect::<Vec<_>>()
@@ -181,9 +175,7 @@ impl Timetable {
         let mut result = Vec::new();
 
         for b in &self.breaks {
-            let (hi, lo) = b.to_bytes();
-            result.push(hi);
-            result.push(lo);
+            result.append(b.to_bytes().to_vec().as_mut());
         }
 
         for d in &self.days {
@@ -234,11 +226,11 @@ impl Timetable {
         for i in 0..8 {
             if !break_enabled[i] { continue; }
 
-            let (sh, sm, eh, em) = self.breaks[i].to_time();
-            let (hour, minute, _) = time.to_hms();
+            let ((sh, sm, ss), (eh, em, es)) = self.breaks[i].to_hms_pair();
+            let (hour, minute, second) = time.to_hms();
 
-            if hour == sh && minute == sm { return Some(true); }
-            if hour == eh && minute == em { return Some(false); }
+            if hour == sh && minute == sm && second == ss { return Some(true); }
+            if hour == eh && minute == em && second == es { return Some(false); }
         }
 
         None
@@ -246,91 +238,36 @@ impl Timetable {
 }
 
 struct Break {
-    value: u16
+    start: Time,
+    end: Time
 }
 
 impl Break {
-    fn new(start_hour: u8, start_minute: u8, end_hour: u8, end_minute: u8) -> Option<Break> {
-        let start = Self::parse_time(start_hour, start_minute)?;
-        let end = Self::parse_time(end_hour, end_minute)?;
-
-        Some(Break { value: u16::from_be_bytes([start, end]) } )
+    #[inline]
+    const fn new(sh: u8, sm: u8, ss: u8, eh: u8, em: u8, es: u8) -> Option<Break> {
+        Some(Break {
+            start: or_return!(Time::from_hms(sh, sm, ss), None),
+            end: or_return!(Time::from_hms(eh, em, es), None)
+        })
     }
 
-    fn parse_time(hour: u8, minute: u8) -> Option<u8> {
-        if minute >= 60 { return None }
-
-        match hour {
-            3..21 => if minute % 5 == 0 { // [0; 216[
-                Some((hour - 3) * 12 + (minute / 5))
-            } else {
-                None
-            },
-            21..24 => if minute % 10 == 0 { // [216; 234[
-                Some((hour - 21) * 6 + (minute / 10) + 216)
-            } else {
-                None
-            },
-            0..3 => if minute % 10 == 0 { // [238; 0[
-                Some((hour) * 6 + (minute / 10) + 238)
-            } else {
-                None
-            },
-            _ => None
-        }
+    fn to_hms_pair(&self) -> ((u8, u8, u8), (u8, u8, u8)) {
+        ( self.start.to_hms(), self.end.to_hms() )
     }
 
-    fn value_to_time(value: u8) -> Option<(u8, u8)> { // (hour, minute)
-        let (sh, sm);
-
-        match value {
-            0..216 => {
-                sm = (value % 12) * 5;
-                sh = value / 12 + 3
-            }
-            216..234 => {
-                let hi = value - 120;
-                sm = (hi % 6) * 10;
-                sh = hi / 6 + 21
-            }
-            238.. => {
-                let hi = value - 238;
-                sm = (hi % 6) * 10;
-                sh = hi / 6
-            }
-            _ => return None
-        }
-
-        Some((sh, sm))
-    }
-
-    fn to_time(&self) -> (u8, u8, u8, u8) { // sh, sm, eh, em
-        let [hi, lo] = self.value.to_be_bytes();
-
-        let ((sh, sm), (eh, em)) = (
-            Self::value_to_time(hi).expect("The underlying value was invalid"),
-            Self::value_to_time(lo).expect("The underlying value was invalid")
-        );
-
-        (sh, sm, eh, em)
-    }
-
-    fn from_bytes(start: u8, end: u8) -> Option<Break> {
-        if (start >= 234 && start < 238) || (end >= 234 && end < 238) {
-            None
-        } else {
-            Some( Break { value: ((start as u16) << 8) | (end as u16) } )
-        }
-    }
-
-    fn to_bytes(&self) -> (u8, u8) {
-        let [hi, lo] = self.value.to_be_bytes();
-        (hi, lo)
+    fn from_hms_pair(start: (u8, u8, u8), end: (u8, u8, u8)) -> Option<Break> {
+        let (sh, sm, ss) = start;
+        let (eh, em, es) = end;
+        Some(Break {
+            start: Time::from_hms(sh, sm, ss)?,
+            end: Time::from_hms(eh, em, es)?
+        })
     }
 
     fn to_csv(&self) -> Vec<CsvObject> {
-        let (sh, sm, eh, em) = self.to_time();
-        vec![format!("{sh:02}:{sm:02}").into(), format!("{eh:02}:{em:02}").into()]
+        let ((sh, sm, ss), (eh, em, es)) = self.to_hms_pair();
+
+        vec![format!("{sh:02}:{sm:02}:{ss:02}").into(), format!("{eh:02}:{em:02}:{es:02}").into()]
     }
 
     fn from_csv(csv: Vec<CsvObject>) -> Option<Break> {
@@ -339,10 +276,28 @@ impl Break {
         match (start, end) {
             (CsvObject::String(start), CsvObject::String(end)) => {
                 let ((sh, sm), (eh, em)) = (Self::time_from_str(start.as_ref())?, Self::time_from_str(end.as_ref())?);
-                Self::new(sh, sm, eh, em)
+                Self::new(sh, sm, 0, eh, em, 0)
             },
             _ => None
         }
+    }
+
+    const fn to_bytes(&self) -> [u8; 5] {
+        let start_bytes: [_; 4] = (self.start.elapsed_seconds() << 15).to_be_bytes();
+        let end_bytes: [_; 4] = (self.end.elapsed_seconds() & 0x0001FFFF).to_be_bytes();
+
+        [start_bytes[0], start_bytes[1], start_bytes[2] | end_bytes[1], end_bytes[2], end_bytes[3]]
+    }
+
+    fn from_bytes(bytes: &[u8; 5]) -> Option<Break> {
+        let start_bytes: [u8; 4] = bytes[0..4].try_into().unwrap();
+
+        let end_bytes: [u8; 4] = bytes[1..5].try_into().unwrap();
+
+        let start = u32::from_be_bytes(start_bytes) >> 15;
+        let end = u32::from_be_bytes(end_bytes) & 0x0001FFFF;
+
+        Some(Break { start: Time::from_seconds(start), end: Time::from_seconds(end) })
     }
 
     fn time_from_str(s: &str) -> Option<(u8, u8)> {
@@ -354,7 +309,7 @@ impl Break {
 
 impl std::fmt::Debug for Break {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (sh, sm, eh, em) = self.to_time();
+        let ((sh, sm, _ss), (eh, em, _es)) = self.to_hms_pair();
         write!(f, "{:02}:{:02}-{:02}:{:02}", sh, sm, eh, em)
     }
 }
@@ -370,7 +325,7 @@ struct DailySchedule {
 }
 
 impl DailySchedule {
-    fn from_byte(byte: &u8) -> DailySchedule {
+    const fn from_byte(byte: &u8) -> DailySchedule {
         DailySchedule { data: *byte }
     }
 
@@ -436,14 +391,51 @@ impl std::fmt::Display for DailySchedule {
     }
 }
 
-/*
-#[derive(Debug)]
-pub enum Error {
-    CannotReadFile,
-    InvalidConfigFile,
-    NoTimetableFound,
-    CannotWriteFile
-}
+pub const fn default_config_bytes() -> [u8; 54] {
+    let mut result = [0; 54];
 
-type ConfigResult<T> = Result<T, Error>;
-*/
+    let header = b"MUSIQ\nT";
+
+    let breaks = [
+        Break::new(07, 40, 00, 07, 50, 00).unwrap().to_bytes(),
+        Break::new(08, 35, 00, 08, 40, 00).unwrap().to_bytes(),
+        Break::new(09, 25, 00, 09, 35, 00).unwrap().to_bytes(),
+        Break::new(10, 20, 00, 10, 30, 00).unwrap().to_bytes(),
+        Break::new(11, 15, 00, 11, 25, 00).unwrap().to_bytes(),
+        Break::new(12, 10, 00, 12, 15, 00).unwrap().to_bytes(),
+        Break::new(13, 00, 00, 13, 30, 00).unwrap().to_bytes(),
+        Break::new(14, 10, 00, 14, 20, 00).unwrap().to_bytes()
+    ];
+
+    let breaks = breaks.as_flattened(); // &[u8; 40]
+
+    let days = [0b00111111; 5];
+
+    let mut i = 0;
+
+    // 0..7
+    while i < header.len() {
+        result[i] = header[i];
+        i += 1;
+    }
+
+    // 7..47
+    while i < header.len() + breaks.len() {
+        result[i] = breaks[i-header.len()];
+        i += 1;
+    }
+
+    // 47..52
+    while i < breaks.len() + header.len() + days.len() {
+        result[i] = days[i-header.len()-breaks.len()];
+        i += 1;
+    }
+
+    // 52
+    result[52] = b'O';
+
+    // 53
+    result[53] = 0x02;
+
+    result
+}
