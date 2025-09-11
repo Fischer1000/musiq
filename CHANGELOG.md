@@ -1,3 +1,7 @@
+# 3.0.2
+- Selecting break times now actually changes the server's state without any errors
+- Autoplay functionality fixed to accommodate seconds (`3.0.1` broke it)
+- Internal refactorings
 # 3.0.1
 - All seconds of the day can now be selected at break time selection
 - Added a built in `config.musiq` generator
