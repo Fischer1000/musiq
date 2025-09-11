@@ -19,6 +19,8 @@ use crate::Error;
 /// Block a thread while a song is playing with this Mutex
 pub static SONG_PLAYING_GATE: Mutex<()> = Mutex::new(());
 
+pub const SONG_PADDING: f64 = 7.0;
+
 #[derive(Debug, Eq, Clone)]
 pub struct Song {
     filename: Box<OsStr>,
@@ -139,7 +141,9 @@ impl Song {
 
         or_return!(stream.play().ok(), Err(Error::StreamCannotBePlayed));
 
-        let duration_secs = samples.len() as f64 / (sample_rate as f64 * channels as f64);
+        let duration_secs = samples.len() as f64 / (sample_rate as f64 * channels as f64) + SONG_PADDING;
+
+        // println!("{} / ({} * {}) = {duration_secs}", samples.len() as f64, sample_rate as f64, channels as f64);
 
         std::thread::sleep(std::time::Duration::from_secs_f64(duration_secs));
 

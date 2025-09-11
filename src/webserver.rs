@@ -388,7 +388,7 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                 ).into_bytes()
             },
             #[cfg(feature = "debug-access")]
-            "/data/server_time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
+            "/data/server-time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
             _ => return Response::not_found(),
         }.to_vec()
     };
@@ -433,8 +433,9 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
             Response::ok("Timetable successfully set".into())
         },
         "/api/set-breaks" => {
-            or_return!(configs.set_breaks_from_csv(
-                csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
+            or_return!(
+                configs.set_breaks_from_csv(
+                    csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
                 ),
                 Response::bad_request()
             );
@@ -542,6 +543,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
             if success == 0 {
                 Response::new(404, "Not Found", Vec::new(), "All requests failed.".as_bytes().to_vec()).unwrap()
             } else {
+                println!("Manual play started");
                 Response::ok(format!("{} successfully played", success).as_bytes().to_vec())
             }
         },

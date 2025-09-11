@@ -226,11 +226,8 @@ impl Timetable {
         for i in 0..8 {
             if !break_enabled[i] { continue; }
 
-            let ((sh, sm, ss), (eh, em, es)) = self.breaks[i].to_hms_pair();
-            let (hour, minute, second) = time.to_hms();
-
-            if hour == sh && minute == sm && second == ss { return Some(true); }
-            if hour == eh && minute == em && second == es { return Some(false); }
+            if &self.breaks[i].start == time { return Some(true); }
+            if &self.breaks[i].end == time { return Some(false); }
         }
 
         None
@@ -275,8 +272,8 @@ impl Break {
 
         match (start, end) {
             (CsvObject::String(start), CsvObject::String(end)) => {
-                let ((sh, sm), (eh, em)) = (Self::time_from_str(start.as_ref())?, Self::time_from_str(end.as_ref())?);
-                Self::new(sh, sm, 0, eh, em, 0)
+                let ((sh, sm, ss), (eh, em, es)) = (Self::time_from_str(start.as_ref())?, Self::time_from_str(end.as_ref())?);
+                Self::new(sh, sm, ss, eh, em, es)
             },
             _ => None
         }
@@ -300,10 +297,11 @@ impl Break {
         Some(Break { start: Time::from_seconds(start), end: Time::from_seconds(end) })
     }
 
-    fn time_from_str(s: &str) -> Option<(u8, u8)> {
-        let (h, m) = s.split_once(':')?;
+    fn time_from_str(string: &str) -> Option<(u8, u8, u8)> {
+        let (h, m_s) = string.split_once(':')?;
+        let (m, s) = m_s.split_once(':')?;
 
-        Some((h.parse().ok()?, m.parse().ok()?))
+        Some((h.parse().ok()?, m.parse().ok()?, s.parse().ok()?))
     }
 }
 

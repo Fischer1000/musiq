@@ -62,10 +62,8 @@ pub enum Error {
 /// which then calls handles for TCP requests, and handles time-related events.
 pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
     addr: A,
-    // mut database: database::SongDatabase,
     database_path: P,
     database_filter: F,
-    // mut configs: config::Configs
     config_file_path: P
 ) -> Result<Infallible, Error> {
     let listener = TcpListener::bind(&addr).map_err(|_| Error::CannotBind)?;
@@ -124,9 +122,9 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
         }
     };
 
-    let mut song_play_handle: Option<std::thread::JoinHandle<_>> = None;
+    let mut play_thread: Option<std::thread::JoinHandle<_>> = None;
 
-    loop {
+    'main: loop {
         if let Ok((mut stream, _)) = listener.accept() {
             stream.set_nonblocking(false).map_err(|_| Error::CannotSetNonblocking)?;
 
@@ -152,18 +150,33 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
             );
         }
 
-        if 'a: { or!(&song_play_handle, break 'a true).is_finished() } {
-            'action: { if let Some(action) = configs.timetable().action(
-                &Time::now(configs.utc_offset()),
-                &Day::today(configs.utc_offset())
-            ) {
-                if !action { break 'action }
-                let playlist = or!(songs::compose_playlist(PLAYLIST_LENGTH, &mut database), break 'action);
+        match &play_thread {
+            Some(t) if t.is_finished() => 'action: {
+                if let Some(action) = configs.timetable().action(
+                    &Time::now(configs.utc_offset()),
+                    &Day::today(configs.utc_offset())
+                    ) {
+                    if !action { break 'action }
+                    let playlist = or!(songs::compose_playlist(PLAYLIST_LENGTH, &mut database), break 'action);
 
-                song_play_handle = Some(std::thread::spawn(move || { songs::play_playlist(&playlist) }));
-            }}
+                    println!("Scheduled play started");
+                    play_thread = Some(std::thread::spawn(move || { songs::play_playlist(&playlist) }));
+                }
+            },
+            None => 'action: {
+                if let Some(action) = configs.timetable().action(
+                    &Time::now(configs.utc_offset()),
+                    &Day::today(configs.utc_offset())
+                ) {
+                    if !action { break 'action }
+                    let playlist = or!(songs::compose_playlist(PLAYLIST_LENGTH, &mut database), break 'action);
+
+                    println!("Scheduled play started");
+                    play_thread = Some(std::thread::spawn(move || { songs::play_playlist(&playlist) }));
+                }
+            }
+            Some(_) => ()
         }
-
     }
 }
 

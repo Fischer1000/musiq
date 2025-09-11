@@ -2,6 +2,7 @@ use std::fmt::write;
 use std::time::SystemTime;
 
 /// Represents a time of day
+#[derive(Eq, PartialEq, Copy, Clone)]
 pub struct Time {
     data: u32
 }
