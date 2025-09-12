@@ -1,8 +1,12 @@
-# 3.0.2
+# 0.3.3
+- The server's UTC offset value is now presented to the web UI
+- Typo corrected in `CHANGELOG.md` _(3.0.1 -> 0.3.1, 3.0.2 -> 0.3.2)_
+- Minor web UI style changes
+# 0.3.2
 - Selecting break times now actually changes the server's state without any errors
 - Autoplay functionality fixed to accommodate seconds (`3.0.1` broke it)
 - Internal refactorings
-# 3.0.1
+# 0.3.1
 - All seconds of the day can now be selected at break time selection
 - Added a built in `config.musiq` generator
 - Changed the format of `config.musiq`

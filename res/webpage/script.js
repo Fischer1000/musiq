@@ -7,6 +7,7 @@ const deleteSongs = document.getElementById('delete-selected');
 const playSongs = document.getElementById('play-selected');
 const timetableForm = document.getElementById('timetable');
 const addSongForm = document.getElementById('add-song-form');
+const utcOffset = document.getElementById("utc-offset");
 
 // Songs to be disabled or deleted
 const selectedSongs = [];
@@ -342,6 +343,27 @@ fetch("data/breaks.csv")
             document.getElementById("break-start" + i).value = csvRows[i][0]
             document.getElementById("break-end" + i).value = csvRows[i][1]
         }
+    })
+    .catch(err => console.error("Fetch error:", err));
+
+// Fetch UTC offset
+fetch("data/utc-offset.bin")
+    .then(res => {
+        if (!res.ok) {
+            throw new Error("HTTP Error" + res.status);
+        }
+        return res.arrayBuffer();
+    })
+    .then(buf => {
+        const int8View = new Int8Array(buf);
+
+        const num = int8View[0];
+
+        if (buf.byteLength !== 1 || num < -24 || num > 24 ) {
+            throw new Error("Invalid response")
+        }
+
+        utcOffset.value = num
     })
     .catch(err => console.error("Fetch error:", err));
 

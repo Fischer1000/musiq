@@ -150,6 +150,7 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
             );
         }
 
+        // Nasty duplicated code
         match &play_thread {
             Some(t) if t.is_finished() => 'action: {
                 if let Some(action) = configs.timetable().action(

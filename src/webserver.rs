@@ -379,6 +379,17 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                     DEFAULT_SEPARATOR,
                 ).into_bytes()
             },
+            "/data/utc-offset.bin" => return Response::new(
+                200,
+                "OK",
+                vec![
+                    "Content-Type: application/octet-stream".into(),
+                    "Content-Length: 1".into()
+                ],
+                vec![
+                    configs.utc_offset() as u8
+                ]
+            ).unwrap(),
             "/data/songs.csv" => break 'match_uri {
                 content_type = "text/csv";
                 content_encoding = None;

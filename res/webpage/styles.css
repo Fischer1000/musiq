@@ -13,6 +13,7 @@ body {
     width: max-content;
     margin-left: auto;
     margin-right: auto;
+    height: 5vh;
 }
 
 .section-head {
@@ -29,7 +30,6 @@ div.sections {
     border-radius: 1vw;
     display: flex;
     padding: 1vh;
-
     height: 82vh;
 }
 
@@ -55,11 +55,11 @@ table {
 }
 
 table.timetable {
-    width: 20vw;
+    width: 18vw;
 }
 
 table.song-list {
-    width: 30vw;
+    width: 27vw;
     margin: 0;
 }
 
