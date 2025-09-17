@@ -10,5 +10,6 @@
 - Have a translation of the web UI
 - Finishing the event scheduling API
 - Normalizing the output volume
+- Finnish `set_enabled` in `songs.rs`
 # Bugs to be fixed
 _Currently empty_

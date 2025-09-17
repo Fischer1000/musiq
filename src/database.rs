@@ -101,14 +101,15 @@ impl SongDatabase {
     pub fn get_songs_csv(&self) -> Vec<Vec<CsvObject>> {
         let mut result = Vec::new();
 
-        let mut entries = self.songs.iter().map(|s| (s.filename(), s.enabled())).collect::<Vec<_>>();
-        entries.sort_by(|(f0, _), (f1, _)| f0.cmp(f1));
+        let mut entries = self.songs.iter().map(|s| (s.filename(), s.enabled(), s.was_played())).collect::<Vec<_>>();
+        entries.sort_by(|(f0, ..), (f1, ..)| f0.cmp(f1));
 
-        for (filename, enabled) in entries {
+        for (filename, enabled, was_played) in entries {
             let filename = or_continue!(filename.to_str()).into();
             let enabled = enabled.into();
+            let was_played = was_played.into();
 
-            result.push(vec![filename, enabled]);
+            result.push(vec![filename, enabled, was_played]);
         }
 
         result
@@ -120,7 +121,7 @@ impl SongDatabase {
         let mut added: usize = 0;
 
         for entry in entries {
-            let [filename, enabled]: [CsvObject; 2] = or_return!(entry.try_into().ok(), Err(Error::InvalidCSV));
+            let [filename, enabled, was_played]: [CsvObject; 3] = or_return!(entry.try_into().ok(), Err(Error::InvalidCSV));
 
             let filename = Path::new( or_return!(
                 filename.as_string(),
@@ -139,6 +140,8 @@ impl SongDatabase {
             } else {
                 song.disable();
             }
+
+            song.set_played(or_return!(was_played.as_bool(), Err(Error::InvalidCSV)));
 
             self.songs.replace(song);
 

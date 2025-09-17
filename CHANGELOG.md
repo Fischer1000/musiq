@@ -1,3 +1,6 @@
+# 0.3.6
+- Hotfix for improving song randomization
+- Deprecated some functions
 # 0.3.5
 - Made so that the playback functionality doesn't decode on-the-fly but instead
 ahead-of-time, and also regard the output device's parameters

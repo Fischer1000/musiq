@@ -13,7 +13,7 @@ use cpal::Device;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
 use crate::database::SongDatabase;
-use crate::{or, or_return, stat};
+use crate::or_return;
 use crate::Error;
 
 /// Block a thread while a song is playing with this Mutex
@@ -61,12 +61,18 @@ impl Song {
         }
     }
 
+    pub fn set_enabled(&mut self, enabled: bool) {
+        todo!()
+    }
+
     #[inline]
+    #[deprecated(since = "0.3.6")]
     pub fn enable(&mut self) {
         self.metadata |= 2
     }
 
     #[inline]
+    #[deprecated(since = "0.3.6")]
     pub fn disable(&mut self) {
         self.metadata &= !2
     }
@@ -161,10 +167,16 @@ pub fn compose_playlist(elem_cnt: usize, database: &mut SongDatabase) -> Option<
     let mut elems: Vec<_> = database
         .inner()
         .iter()
-        .filter_map(|e| if e.enabled() && !e.was_played() { Some(e) } else { None })
+        .filter_map(|e| if e.enabled() && !e.was_played() { Some(e.to_owned()) } else { None })
         .collect();
 
-    if elem_cnt > elems.len() { return None; }
+    if elem_cnt > elems.len() {
+        database.reset_played();
+        let elems = or_return!(compose_playlist(elem_cnt, database), None);
+        if elems.is_empty() { // If resetting solved it, no need to return None
+            return None; // Prevent an infinite loop
+        }
+    }
 
     elems.shuffle(&mut rng());
 
