@@ -9,5 +9,6 @@
 - Send the server's current time to the web UI
 - Remove features and instead use environment variables or command line arguments
 - Have a translation of the web UI
+- Finishing the event scheduling API
 # Bugs to be fixed
 _Currently empty_

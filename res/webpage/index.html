@@ -5,9 +5,6 @@
     <title>Musiq Admin Interface</title>
     <link rel="stylesheet" href="files/styles.css">
     <link rel="icon" href="files/favicon.svg">
-    <!-- link rel="prefetch" href="data/songs.csv" as="fetch" -->
-    <!-- link rel="prefetch" href="data/timetable.csv" as="fetch" -->
-    <!-- link rel="prefetch" href="data/breaks.csv" as="fetch" -->
 </head>
 <body>
     <h1 class="title">Musiq Admin Interface</h1>
@@ -348,6 +345,16 @@
                 <label for="songs" class="button" id="songs-label">Select songs</label>
                 <input type="submit" class="submit" value="Upload 0 song" id="song-submit" disabled>
             </form>
+        </div>
+        <div class="scheduled section">
+            <h2 class="section-head">Scheduled Events</h2>
+            <div class="scheduled-list" id="scheduled-list-table-div"><table class="scheduled-list scheduled" id="scheduled-list-table">
+                <tr>
+                    <th>Filename</th>
+                    <th>Time</th>
+                    <th>Repetition</th>
+                </tr>
+            </table></div>
         </div>
     </div>
     <script src="files/script.js"></script>

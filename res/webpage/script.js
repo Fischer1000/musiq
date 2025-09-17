@@ -385,7 +385,11 @@ fetch("data/songs.csv")
             let row = songListTable.insertRow(-1);
             row.className = "song-list-row";
             row.id = "song-" + csvRow[0];
-            row.insertCell(0).innerHTML = csvRow[0];
+
+            const filenameCell = row.insertCell(0);
+            filenameCell.innerHTML = csvRow[0];
+            filenameCell.className = "filename-field";
+
             if (csvRow[1]) {
                 row.insertCell(1).innerHTML = "✔";
             } else {

@@ -49,7 +49,6 @@ table {
     color: #2d3142;
     text-align: center;
     vertical-align: center;
-    margin-top: 0.5vh;
     margin-bottom: 0.5vh;
     height: 20px;
 }
@@ -63,7 +62,21 @@ table.song-list {
     margin: 0;
 }
 
+table.scheduled-list {
+    width: 30vw;
+    margin: 0;
+}
+
 #song-list-table-div {
+    width: max-content;
+    overflow-y: scroll;
+    height: 50vh;
+    background-color: #ffffff;
+    margin-top: 0.5vw;
+    margin-bottom: 0.5vh;
+}
+
+#scheduled-list-table-div {
     width: max-content;
     overflow-y: scroll;
     height: 50vh;
@@ -99,6 +112,14 @@ th {
     background-color: #4f5d75;
     color: #ffffff;
     font-weight: bold;
+    position: sticky;
+    inset: 0 auto auto;
+    border-top-width: 0;
+    border-bottom-width: 0;
+}
+
+.filename-field {
+    text-align: right;
 }
 
 .utc-offset {
