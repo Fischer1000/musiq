@@ -7,7 +7,6 @@ use std::convert::Infallible;
 use std::io::Write;
 use std::net::{TcpListener, ToSocketAddrs};
 use std::path::Path;
-
 use crate::time::{Time, Day};
 
 pub static SONG_FILES_DIR: &str = "./songs/";
@@ -150,32 +149,26 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
             );
         }
 
-        // Nasty duplicated code
-        match &play_thread {
-            Some(t) if t.is_finished() => 'action: {
-                if let Some(action) = configs.timetable().action(
-                    &Time::now(configs.utc_offset()),
-                    &Day::today(configs.utc_offset())
-                    ) {
-                    if !action { break 'action }
-                    let playlist = or!(songs::compose_playlist(PLAYLIST_LENGTH, &mut database), break 'action);
+        let now = Time::now(configs.utc_offset());
 
-                    println!("Scheduled play started");
-                    play_thread = Some(std::thread::spawn(move || { songs::play_playlist(&playlist) }));
-                }
-            },
-            None => 'action: {
-                if let Some(action) = configs.timetable().action(
-                    &Time::now(configs.utc_offset()),
-                    &Day::today(configs.utc_offset())
-                ) {
-                    if !action { break 'action }
-                    let playlist = or!(songs::compose_playlist(PLAYLIST_LENGTH, &mut database), break 'action);
+        let helper = |configs: &mut config::Configs, database: &mut database::SongDatabase| {
+            if let Some(action) = configs.timetable().action(
+                &now,
+                &Day::today(configs.utc_offset())
+            ) {
+                if !action { return None; }
+                let playlist = or_return!(songs::compose_playlist(PLAYLIST_LENGTH, database), None);
 
-                    println!("Scheduled play started");
-                    play_thread = Some(std::thread::spawn(move || { songs::play_playlist(&playlist) }));
-                }
+                println!("Scheduled play started at {}", now);
+                Some(std::thread::spawn(move || { songs::play_playlist(&playlist) }))
+            } else {
+                None
             }
+        };
+
+        match &play_thread {
+            Some(t) if t.is_finished() => play_thread = helper(&mut configs, &mut database),
+            None => play_thread = helper(&mut configs, &mut database),
             Some(_) => ()
         }
     }

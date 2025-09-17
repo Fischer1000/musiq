@@ -49,6 +49,12 @@ macro_rules! or_return {
             Some(x) => x,
             None => return $r
         }
+    };
+    ($e:expr) => {
+        match $e {
+            Some(x) => x,
+            None => return
+        }
     }
 }
 

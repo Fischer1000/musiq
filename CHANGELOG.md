@@ -1,3 +1,13 @@
+# 0.3.5
+- Made so that the playback functionality doesn't decode on-the-fly but instead
+ahead-of-time, and also regard the output device's parameters
+- Removed hard-coded song padding
+- Made playback start announcing also state the time of day
+- Removed some duplicated code
+# 0.3.4
+- Tweaked the web UI's design
+- Added a new tab called 'Scheduled Events'. _It is currently in development,
+so it is of no use for now._
 # 0.3.3
 - The server's UTC offset value is now presented to the web UI
 - Typo corrected in `CHANGELOG.md` _(3.0.1 -> 0.3.1, 3.0.2 -> 0.3.2)_

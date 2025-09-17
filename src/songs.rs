@@ -19,8 +19,6 @@ use crate::Error;
 /// Block a thread while a song is playing with this Mutex
 pub static SONG_PLAYING_GATE: Mutex<()> = Mutex::new(());
 
-pub const SONG_PADDING: f64 = 7.0;
-
 #[derive(Debug, Eq, Clone)]
 pub struct Song {
     filename: Box<OsStr>,
@@ -78,7 +76,7 @@ impl Song {
     pub fn play(&self, device: &Device) -> Result<(), Error> {
         let file_path = Path::new(crate::SONG_FILES_DIR).join(self.filename.as_ref());
 
-        let file = or_return!(std::fs::File::open(file_path).ok(), Err(Error::CannotReadFile));
+        let file = or_return!(std::fs::File::open(&file_path).ok(), Err(Error::CannotReadFile));
         let mut decoder = Decoder::new(BufReader::new(file));
         let mut samples = Vec::new();
 
@@ -86,64 +84,53 @@ impl Song {
         let mut channels = 2;
 
         while let Ok(Frame { data, sample_rate: sr, channels: ch, .. }) = decoder.next_frame() {
-            samples.extend(data);
+            samples.extend(data.iter().map(|&s| s as f32 / i16::MAX as f32));
             sample_rate = sr;
             channels = ch;
         }
 
-        let samples = Arc::new(samples);
-        let index = Arc::new(AtomicUsize::new(0));
+        let mut index: usize = 0;
 
-        let config = or_return!(device.default_output_config().ok(), Err(Error::DeviceConfigCannotBeSet));
-        let sample_format = config.sample_format();
+        let config = cpal::StreamConfig {
+            channels: channels as u16,
+            sample_rate: cpal::SampleRate(sample_rate as u32),
+            buffer_size: cpal::BufferSize::Default,
+        };
+
         let config = config.into();
+
+        let duration_secs = samples.len() as f64 / (sample_rate as f64 * channels as f64);
 
         let _guard = SONG_PLAYING_GATE.lock().unwrap(); // Unwrap so that panics cascade over threads
 
-        let stream = or_return!(match sample_format {
-            cpal::SampleFormat::F32 => device.build_output_stream(
+        let stream = or_return!(
+            device.build_output_stream(
                 &config,
-                {
-                    let samples = samples.clone();
-                    let index = index.clone();
-                    move |data: &mut [f32], _| {
-                        let i = index.fetch_add(data.len(), Ordering::SeqCst);
-
-                        if i >= samples.len() {
-                            // Already at or past end of buffer: silence
-                            for out in data.iter_mut() {
-                                *out = 0.0;
-                            }
-                            return;
-                        }
-
-                        let end = (i + data.len()).min(samples.len());
-                        let slice = &samples[i..end];
-
-                        // Write decoded samples
-                        for (out, &s) in data.iter_mut().zip(slice.iter()) {
-                            *out = s as f32 / i16::MAX as f32;
-                        }
-
-                        // If fewer samples remain, fill rest with silence
-                        if slice.len() < data.len() {
-                            for out in &mut data[slice.len()..] {
-                                *out = 0.0;
-                            }
-                        }
+                move |data: &mut [f32], _| {
+                    if index >= samples.len() {
+                        data.fill(0.0);
+                        return;
                     }
+
+                    let end = (index + data.len()).min(samples.len());
+                    let slice = &samples[index..end];
+                    data[..slice.len()].copy_from_slice(slice);
+
+                    if slice.len() < data.len() {
+                        data[slice.len()..].fill(0.0);
+                    }
+
+                    index += data.len();
                 },
-                |_err| {},
+                |e| eprintln!("Unexpected error \"{e}\". This might be a panic in future versions."),
                 None,
-            ),
-            _ => panic!("Unsupported format"),
-        }.ok(), Err(Error::StreamCannotBeBuilt));
+            ).ok(),
+            Err(Error::StreamCannotBeBuilt)
+        );
 
         or_return!(stream.play().ok(), Err(Error::StreamCannotBePlayed));
 
-        let duration_secs = samples.len() as f64 / (sample_rate as f64 * channels as f64) + SONG_PADDING;
-
-        // println!("{} / ({} * {}) = {duration_secs}", samples.len() as f64, sample_rate as f64, channels as f64);
+        println!("Playing \"{}\" ({:.1} seconds)", self.filename.display(), duration_secs);
 
         std::thread::sleep(std::time::Duration::from_secs_f64(duration_secs));
 
