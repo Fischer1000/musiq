@@ -7,6 +7,7 @@ use std::convert::Infallible;
 use std::io::Write;
 use std::net::{TcpListener, ToSocketAddrs};
 use std::path::Path;
+
 use crate::time::{Time, Day};
 
 pub static SONG_FILES_DIR: &str = "./songs/";
@@ -23,6 +24,7 @@ pub mod webserver;
 pub mod embedded_files;
 pub mod csv;
 pub mod time;
+pub mod logging;
 
 #[derive(Debug)]
 #[non_exhaustive]
@@ -41,6 +43,7 @@ pub enum Error {
     InvalidDatabaseFile,
     ConfigFileCannotBeRead,
     CannotReadFile,
+    CannotOpenFile,
     NoTimetableFound,
     CannotWriteFile,
     DirectoryCannotBeRead,
@@ -65,6 +68,8 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
     database_filter: F,
     config_file_path: P
 ) -> Result<Infallible, Error> {
+    logln!("Started");
+
     let listener = TcpListener::bind(&addr).map_err(|_| Error::CannotBind)?;
     listener.set_nonblocking(true).map_err(|_| Error::CannotSetNonblocking)?;
 
@@ -159,7 +164,7 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
                 if !action { return None; }
                 let playlist = or_return!(songs::compose_playlist(PLAYLIST_LENGTH, database), None);
 
-                println!("Scheduled play started at {}", now);
+                logln!("Scheduled play started at {}", now);
                 Some(std::thread::spawn(move || { songs::play_playlist(&playlist) }))
             } else {
                 None

@@ -1,3 +1,7 @@
+# 0.3.7
+- Added logging into a hard-coded path (`./latest.log`)
+- Finished some previously unfinished work
+- Realized `build.rs` was already ran at the intended time
 # 0.3.6
 - Hotfix for improving song randomization
 - Deprecated some functions

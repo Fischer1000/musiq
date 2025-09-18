@@ -9,7 +9,7 @@ use std::path::Path;
 
 use cpal::traits::HostTrait;
 
-use crate::{or_continue, or_return, songs, stat, time};
+use crate::{logln, or_continue, or_return, songs, stat, time};
 use crate::config::Configs;
 use crate::embedded_files;
 use crate::csv::{CsvObject, DEFAULT_SEPARATOR};
@@ -554,7 +554,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
             if success == 0 {
                 Response::new(404, "Not Found", Vec::new(), "All requests failed.".as_bytes().to_vec()).unwrap()
             } else {
-                println!("Manual play started at {}", time::Time::now(configs.utc_offset()));
+                logln!("Manual play started at {}", time::Time::now(configs.utc_offset()));
                 Response::ok(format!("{} successfully played", success).as_bytes().to_vec())
             }
         },

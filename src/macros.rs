@@ -97,6 +97,9 @@ macro_rules! stat {
     () => {
         println!("[{}:{}:{}]", file!(), line!(), column!());
     };
+    (str) => {
+        format!("[{}:{}:{}]", file!(), line!(), column!())
+    };
     ($msg:literal) => {
         println!("[{}:{}:{}]: {}", file!(), line!(), column!(), $msg);
     };

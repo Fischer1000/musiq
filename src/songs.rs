@@ -53,16 +53,22 @@ impl Song {
         self.metadata & 1 != 0
     }
 
+    #[inline]
     pub fn set_played(&mut self, played: bool) {
         if played {
-            self.metadata |= 1;
+            self.metadata |= 0b_0000_0001;
         } else {
-            self.metadata &= !1;
+            self.metadata &= 0b_1111_1110;
         }
     }
 
+    #[inline]
     pub fn set_enabled(&mut self, enabled: bool) {
-        todo!()
+        if enabled {
+            self.metadata |= 0b_0000_0010;
+        } else {
+            self.metadata &= 0b_1111_1101;
+        }
     }
 
     #[inline]
