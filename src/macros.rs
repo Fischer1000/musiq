@@ -6,6 +6,7 @@ macro_rules! or_continue {
     ($e:expr, $c:stmt) => {
         match $e {
             Some(x) => x,
+            #[allow(redundant_semicolons)]
             None => { $c; continue; }
         }
     };

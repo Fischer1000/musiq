@@ -1,7 +1,6 @@
 use std::io::Write;
 use std::sync::{Mutex, atomic};
 use std::fs::{File, OpenOptions};
-use crate::stat;
 
 static LOG_FILE: Mutex<Option<File>> = Mutex::new(None);
 static FILE_OPEN_FAILED: atomic::AtomicBool = atomic::AtomicBool::new(false);
@@ -39,7 +38,6 @@ pub fn write_to_log(data: &str) {
         Some(file) => file,
         None => if !FILE_OPEN_FAILED.load(atomic::Ordering::Relaxed) {
             let tmp = OpenOptions::new().write(true).append(true).create(true).open(LOG_FILE_PATH);
-            stat!(tmp);
             match tmp {
                 Ok(file) => { *guard = Some(file); guard.as_mut().unwrap() },
                 Err(_) => { FILE_OPEN_FAILED.store(true, atomic::Ordering::Relaxed); return; },

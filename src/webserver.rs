@@ -1,15 +1,12 @@
 use std::collections::HashSet;
 use std::convert::Infallible;
 use std::ffi::OsStr;
-use std::fmt::format;
 use std::net::{TcpListener, ToSocketAddrs, TcpStream};
-use std::io::{BufReader, BufRead, Write, Read};
+use std::io::{BufReader, Write, Read};
 use std::mem::MaybeUninit;
 use std::path::Path;
 
-use cpal::traits::HostTrait;
-
-use crate::{logln, or_continue, or_return, songs, stat, time};
+use crate::{logln, or_continue, or_return, songs, time};
 use crate::config::Configs;
 use crate::embedded_files;
 use crate::csv::{CsvObject, DEFAULT_SEPARATOR};
@@ -54,6 +51,7 @@ impl Request {
             let mut error = false;
 
             let header_bytes = buf_reader_bytes.by_ref().map_while(|b| match b {
+                #[allow(unused_parens)]
                 Ok(x) => if (
                     (x == b'\r' && (sequence_buf.ends_with(&[b'\n']) || sequence_buf.len() == 0)) ||
                         x == b'\n' && sequence_buf.ends_with(&[b'\r'])
@@ -112,6 +110,7 @@ impl Request {
                 let mut error = false;
                 let body = buf_reader_bytes.take(content_length).map(|v| match v {
                     Ok(v) => v,
+                    #[allow(invalid_value)] // Body is never read if at least one error has occurred
                     Err(_) => {
                         error = true;
                         unsafe { MaybeUninit::uninit().assume_init() }
@@ -333,13 +332,13 @@ pub fn handle_request(request: Result<Request, Error>, database: &mut Database, 
     match request {
         Request::Get { uri, headers } => handle_get(uri, headers, database, configs),
         Request::Post { uri, headers, body } => handle_post(uri, headers, body, database, configs),
-        _ => return Response::not_implemented()
+        // _ => return Response::not_implemented()
     }
 }
 
 fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Configs) -> Response {
     let content_type: &'static str;
-    let mut content_encoding: Option<&'static str>;
+    let content_encoding: Option<&'static str>;
 
     let body = 'match_uri: {
         match uri.without_query_parameters() {
@@ -363,22 +362,24 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                 content_encoding = if cfg!(feature = "use-encoding") { Some("br") } else { None };
                 embedded_files::FAVICON_SVG
             },
-            "/data/timetable.csv" => break 'match_uri {
+            #[allow(unused_parens)]
+            "/data/timetable.csv" => break 'match_uri ({
                 content_type = "text/csv";
                 content_encoding = None;
                 CsvObject::serialize(
                     configs.get_timetable_csv(),
                     DEFAULT_SEPARATOR,
                 ).into_bytes()
-            },
-            "/data/breaks.csv" => break 'match_uri {
+            }),
+            #[allow(unused_parens)]
+            "/data/breaks.csv" => break 'match_uri ({
                 content_type = "text/csv";
                 content_encoding = None;
                 CsvObject::serialize(
                     configs.get_breaks_csv(),
                     DEFAULT_SEPARATOR,
                 ).into_bytes()
-            },
+            }),
             "/data/utc-offset.bin" => return Response::new(
                 200,
                 "OK",
@@ -390,14 +391,15 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                     configs.utc_offset() as u8
                 ]
             ).unwrap(),
-            "/data/songs.csv" => break 'match_uri {
+            #[allow(unused_parens)]
+            "/data/songs.csv" => break 'match_uri ({
                 content_type = "text/csv";
                 content_encoding = None;
                 CsvObject::serialize(
                     database.get_songs_csv(),
                     DEFAULT_SEPARATOR,
                 ).into_bytes()
-            },
+            }),
             #[cfg(feature = "debug-access")]
             "/data/server-time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
             _ => return Response::not_found(),
@@ -466,6 +468,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
         "/api/disable-songs" => {
             let mut success: u16 = 0;
 
+            #[allow(unused_parens)]
             for name in (
                 or_return!(
                     csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
@@ -480,7 +483,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
                     .iter()
                     .map(|song| if song.filename() == OsStr::new(name) {
                         let mut s = song.clone();
-                        s.disable();
+                        s.set_enabled(false);
                         success += 1;
                         s
                     } else {
@@ -500,6 +503,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
         "/api/enable-songs" => {
             let mut success: u16 = 0;
 
+            #[allow(unused_parens)]
             for name in (
                 or_return!(
                     csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
@@ -514,7 +518,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
                     .iter()
                     .map(|song| if song.filename() == OsStr::new(name) {
                         let mut s = song.clone();
-                        s.enable();
+                        s.set_enabled(true);
                         success += 1;
                         s
                     } else {
@@ -536,6 +540,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
 
             let mut songs = Vec::new();
 
+            #[allow(unused_parens)]
             for name in (
                 or_return!(
                     csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
@@ -562,6 +567,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
             let mut success: u16 = 0;
             let mut error: u16 = 0;
 
+            #[allow(unused_parens)]
             for name in (
                 or_return!(
                     csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
@@ -610,7 +616,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
                         database.add_file(file_path.into_boxed_path()).realize(database, false).unwrap();
                         Response::ok("File saved".as_bytes().to_vec())
                     },
-                    Err(_) => { drop(file); std::fs::remove_file(file_path); Response::internal_server_error() }
+                    Err(_) => { drop(file); let _ = std::fs::remove_file(file_path); Response::internal_server_error() }
                 },
                 Err(e) => match e.kind() {
                     std::io::ErrorKind::AlreadyExists => Response::conflict(),

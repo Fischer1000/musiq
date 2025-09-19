@@ -1,3 +1,5 @@
+# IN PROGRESS
+- Internal compile-time warnings were addressed
 # 0.3.7
 - Added logging into a hard-coded path (`./latest.log`)
 - Finished some previously unfinished work

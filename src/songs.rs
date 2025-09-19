@@ -5,7 +5,7 @@ extern crate cpal;
 use std::ffi::OsStr;
 use std::io::BufReader;
 use std::path::Path;
-use std::sync::{Arc, atomic::{AtomicUsize, Ordering}, Mutex};
+use std::sync::Mutex;
 
 use rand::{rng, seq::SliceRandom};
 use minimp3::{Decoder, Frame};

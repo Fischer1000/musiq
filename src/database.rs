@@ -5,7 +5,7 @@ use std::path::Path;
 
 use crate::songs::Song;
 use crate::csv::CsvObject;
-use crate::{csv, or_continue, or_return, return_unless, stat};
+use crate::{or_continue, or_return, return_unless};
 use crate::Error;
 
 /*
@@ -135,11 +135,7 @@ impl SongDatabase {
                 Err(Error::InvalidCSV)
             );
 
-            if or_return!(enabled.as_bool(), Err(Error::InvalidCSV)) {
-                song.enable();
-            } else {
-                song.disable();
-            }
+            song.set_enabled(or_return!(enabled.as_bool(), Err(Error::InvalidCSV)));
 
             song.set_played(or_return!(was_played.as_bool(), Err(Error::InvalidCSV)));
 

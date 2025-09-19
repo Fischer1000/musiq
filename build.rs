@@ -1,10 +1,16 @@
+#![allow(unused_mut)]
+
 #[cfg(feature = "use-encoding")]
 use brotli;
-use std::env;
+#[cfg(feature = "use-encoding")]
 use std::io::{Read, Write};
+use std::env;
 
+#[cfg(feature = "use-encoding")]
 const BUF_SIZE: usize = 4096;
+#[cfg(feature = "use-encoding")]
 const COMP_QUALITY: u32 = 11;
+#[cfg(feature = "use-encoding")]
 const LG_WINDOW_SIZE: u32 = 21;
 
 fn main() {
