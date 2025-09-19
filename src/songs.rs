@@ -13,11 +13,14 @@ use cpal::Device;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
 use crate::database::SongDatabase;
-use crate::or_return;
+use crate::{logln, or_return};
 use crate::Error;
 
 /// Block a thread while a song is playing with this Mutex
 pub static SONG_PLAYING_GATE: Mutex<()> = Mutex::new(());
+
+/// The target loudness of the normalized songs
+pub const TARGET_LOUDNESS: f32 = 0.75;
 
 #[derive(Debug, Eq, Clone)]
 pub struct Song {
@@ -95,11 +98,24 @@ impl Song {
         let mut sample_rate = 44100;
         let mut channels = 2;
 
+        let mut sq_sum = 0.0;
+
         while let Ok(Frame { data, sample_rate: sr, channels: ch, .. }) = decoder.next_frame() {
-            samples.extend(data.iter().map(|&s| s as f32 / i16::MAX as f32));
+            samples.extend(data.iter().map(|&s| {
+                let sample = s as f32 / i16::MAX as f32;
+                sq_sum += sample * sample;
+                sample
+            }));
             sample_rate = sr;
             channels = ch;
         }
+
+        sq_sum /= samples.len() as f32;
+        let rms = sq_sum.sqrt();
+        let scale_factor = TARGET_LOUDNESS / rms;
+
+        // Scale all samples according to the calculated volume
+        samples.iter_mut().for_each(|s| *s *= scale_factor);
 
         let mut index: usize = 0;
 
@@ -142,7 +158,7 @@ impl Song {
 
         or_return!(stream.play().ok(), Err(Error::StreamCannotBePlayed));
 
-        println!("Playing \"{}\" ({:.1} seconds)", self.filename.display(), duration_secs);
+        logln!("Playing \"{}\" ({:.1} seconds, RMS = {rms}, α={scale_factor})", self.filename.display(), duration_secs);
 
         std::thread::sleep(std::time::Duration::from_secs_f64(duration_secs));
 

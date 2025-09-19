@@ -8,9 +8,6 @@
 - Remove features and instead use environment variables or command line arguments
 - Have a translation of the web UI
 - Finishing the event scheduling API
-- Normalizing the output volume
-- Refactoring warning-emitting code
 - Removing duplicated code from `webserver.rs` at line 467 in the `for` loop
 # Bugs to be fixed
-- Output volume is inconsistent across songs
-- Scheduled plays _may_ fail to fire
+- Scheduled plays _may_ fail to fire _(needs testing)_

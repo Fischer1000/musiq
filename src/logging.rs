@@ -3,7 +3,8 @@ use std::sync::{Mutex, atomic};
 use std::fs::{File, OpenOptions};
 
 static LOG_FILE: Mutex<Option<File>> = Mutex::new(None);
-static FILE_OPEN_FAILED: atomic::AtomicBool = atomic::AtomicBool::new(false);
+// `cfg!(...)` to prevent even trying to open the log file if we don't want to log
+static FILE_OPEN_FAILED: atomic::AtomicBool = atomic::AtomicBool::new(cfg!(feature = "no-logging"));
 
 static LOG_FILE_PATH: &'static str = "./latest.log";
 

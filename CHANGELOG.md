@@ -1,5 +1,8 @@
-# IN PROGRESS
+# 0.4.0
 - Internal compile-time warnings were addressed
+- Added volume normalization using the RMS (root-mean-square) method
+- Added a featured called `no-logging`. This disables the logging functionality
+to write to the log file.
 # 0.3.7
 - Added logging into a hard-coded path (`./latest.log`)
 - Finished some previously unfinished work
