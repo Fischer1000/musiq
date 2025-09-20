@@ -394,19 +394,19 @@ pub const fn default_config_bytes() -> [u8; 54] {
     let header = b"MUSIQ\nT";
 
     let breaks = [
-        Break::new(07, 40, 00, 07, 50, 00).unwrap().to_bytes(),
-        Break::new(08, 35, 00, 08, 40, 00).unwrap().to_bytes(),
-        Break::new(09, 25, 00, 09, 35, 00).unwrap().to_bytes(),
-        Break::new(10, 20, 00, 10, 30, 00).unwrap().to_bytes(),
-        Break::new(11, 15, 00, 11, 25, 00).unwrap().to_bytes(),
-        Break::new(12, 10, 00, 12, 15, 00).unwrap().to_bytes(),
-        Break::new(13, 00, 00, 13, 30, 00).unwrap().to_bytes(),
-        Break::new(14, 10, 00, 14, 20, 00).unwrap().to_bytes()
+        Break::new(07, 41, 00, 07, 50, 00).unwrap().to_bytes(),
+        Break::new(08, 36, 00, 08, 40, 00).unwrap().to_bytes(),
+        Break::new(09, 26, 00, 09, 35, 00).unwrap().to_bytes(),
+        Break::new(10, 21, 00, 10, 30, 00).unwrap().to_bytes(),
+        Break::new(11, 16, 00, 11, 25, 00).unwrap().to_bytes(),
+        Break::new(12, 11, 00, 12, 15, 00).unwrap().to_bytes(),
+        Break::new(13, 01, 00, 13, 30, 00).unwrap().to_bytes(),
+        Break::new(14, 11, 00, 14, 20, 00).unwrap().to_bytes()
     ];
 
     let breaks = breaks.as_flattened(); // &[u8; 40]
 
-    let days = [0b00111111; 5];
+    let days = [0b00111100; 5];
 
     let mut i = 0;
 

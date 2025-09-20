@@ -3,6 +3,8 @@
 - Added volume normalization using the RMS (root-mean-square) method
 - Added a featured called `no-logging`. This disables the logging functionality
 to write to the log file.
+- Made default configs one minute late to prevent playing early, and
+also disabled 6th and 7th breaks by default
 # 0.3.7
 - Added logging into a hard-coded path (`./latest.log`)
 - Finished some previously unfinished work
