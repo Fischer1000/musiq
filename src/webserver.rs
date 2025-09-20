@@ -430,6 +430,17 @@ macro_rules! csv_from_utf8_or_return {
     };
 }
 
+macro_rules! first_line_from_utf8_csv_or_return {
+    ($bytes:expr, $error:expr) => {
+        or_return!(
+            csv_from_utf8_or_return!($bytes, $error)
+                .into_iter()
+                .next(),
+            $error
+        ).iter().filter_map(|v| v.as_string())
+    };
+}
+
 fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database, configs: &mut Configs) -> Response {
     // println!("URI: {:?}\nHeaders:\n{}Body length: {}\n", uri, headers.join("\n"), body.len());
 
@@ -468,16 +479,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
         "/api/disable-songs" => {
             let mut success: u16 = 0;
 
-            #[allow(unused_parens)]
-            for name in (
-                or_return!(
-                    csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
-                        .into_iter()
-                        .take(1)
-                        .next(),
-                    Response::bad_request()
-                ).iter().filter_map(|v| v.as_string())
-            ) {
+            for name in first_line_from_utf8_csv_or_return!(body.as_slice(), Response::bad_request()) {
                 let songs = database
                     .inner()
                     .iter()
@@ -503,16 +505,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
         "/api/enable-songs" => {
             let mut success: u16 = 0;
 
-            #[allow(unused_parens)]
-            for name in (
-                or_return!(
-                    csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
-                        .into_iter()
-                        .take(1)
-                        .next(),
-                    Response::bad_request()
-                ).iter().filter_map(|v| v.as_string())
-            ) {
+            for name in first_line_from_utf8_csv_or_return!(body.as_slice(), Response::bad_request()) {
                 let songs = database
                     .inner()
                     .iter()
@@ -540,16 +533,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
 
             let mut songs = Vec::new();
 
-            #[allow(unused_parens)]
-            for name in (
-                or_return!(
-                    csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
-                        .into_iter()
-                        .take(1)
-                        .next(),
-                    Response::bad_request()
-                ).iter().filter_map(|v| v.as_string())
-            ) {
+            for name in first_line_from_utf8_csv_or_return!(body.as_slice(), Response::bad_request()) {
                 songs.push(or_continue!(Song::new(Path::new(name))));
                 success += 1;
             }
@@ -567,16 +551,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
             let mut success: u16 = 0;
             let mut error: u16 = 0;
 
-            #[allow(unused_parens)]
-            for name in (
-                or_return!(
-                    csv_from_utf8_or_return!(body.as_slice(), Response::bad_request())
-                        .into_iter()
-                        .take(1)
-                        .next(),
-                    Response::bad_request()
-                ).iter().filter_map(|v| v.as_string())
-            ) {
+            for name in first_line_from_utf8_csv_or_return!(body.as_slice(), Response::bad_request()) {
                 let file_path = Path::new(crate::SONG_FILES_DIR).join(name);
 
                 match database.remove_entry(OsStr::new(name)).realize(database, false) {

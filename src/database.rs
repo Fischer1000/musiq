@@ -162,6 +162,7 @@ impl SongDatabase {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum DatabaseTransaction {
     EntryAdded { file_path: Box<Path> },
     EntryRemoved { file_name: Box<OsStr> }
@@ -216,7 +217,6 @@ impl DatabaseTransaction {
                     Err((self, EntryCreationFailed))
                 ));
             }
-            _ => todo!()
         };
 
         Ok(())

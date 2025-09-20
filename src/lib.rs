@@ -1,4 +1,8 @@
-#![warn(absolute_paths_not_starting_with_crate, ambiguous_negative_literals, elided_lifetimes_in_paths, ffi_unwind_calls, if_let_rescope, meta_variable_misuse, redundant_imports, unit_bindings, unnameable_types, unreachable_pub, variant_size_differences)]
+#![warn(
+    absolute_paths_not_starting_with_crate, ambiguous_negative_literals, elided_lifetimes_in_paths,
+    ffi_unwind_calls, if_let_rescope, meta_variable_misuse, redundant_imports, unit_bindings,
+    unnameable_types, unreachable_pub, variant_size_differences
+)]
 // #![warn(missing_docs, missing_debug_implementations)]
 #![deny(keyword_idents, unsafe_op_in_unsafe_fn)]
 #![forbid(deprecated_safe_2024, non_ascii_idents, unused_crate_dependencies)]

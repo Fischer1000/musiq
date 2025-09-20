@@ -8,6 +8,9 @@
 - Remove features and instead use environment variables or command line arguments
 - Have a translation of the web UI
 - Finishing the event scheduling API
-- Removing duplicated code from `webserver.rs` at line 467 in the `for` loop
+- Add version information to the config file to prevent
+reading potentially malformed data
+- Add tests
+- Add documentation
 # Bugs to be fixed
 - Scheduled plays _may_ fail to fire _(needs testing)_
