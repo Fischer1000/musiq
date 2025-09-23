@@ -15,12 +15,10 @@ use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use crate::database::SongDatabase;
 use crate::{logln, or_return};
 use crate::Error;
+use crate::generated::TARGET_VOLUME;
 
 /// Block a thread while a song is playing with this Mutex
 pub static SONG_PLAYING_GATE: Mutex<()> = Mutex::new(());
-
-/// The target loudness of the normalized songs
-pub const TARGET_LOUDNESS: f32 = 0.75;
 
 #[derive(Debug, Eq, Clone)]
 pub struct Song {
@@ -112,7 +110,7 @@ impl Song {
 
         sq_sum /= samples.len() as f32;
         let rms = sq_sum.sqrt();
-        let scale_factor = TARGET_LOUDNESS / rms;
+        let scale_factor = TARGET_VOLUME / rms;
 
         // Scale all samples according to the calculated volume
         samples.iter_mut().for_each(|s| *s *= scale_factor);

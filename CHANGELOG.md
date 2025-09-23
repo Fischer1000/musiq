@@ -1,3 +1,9 @@
+# 0.4.1
+- Moved hard-coded target loudness value to an optional
+compile-time environment variable of name `TARGET_VOLUME`
+- Modified `build.rs` to be able to generate a rust file to 
+store pre-evaluated constants and statics. These are imported into the `generated` module
+- Added `ENVVARS.md` to track expected environment variables
 # 0.4.0
 - Internal compile-time warnings were addressed
 - Added volume normalization using the RMS (root-mean-square) method

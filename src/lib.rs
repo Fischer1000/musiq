@@ -30,6 +30,8 @@ pub mod csv;
 pub mod time;
 pub mod logging;
 
+pub mod generated { include!(concat!(env!("OUT_DIR"), "/generated.rs")); }
+
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum Error {

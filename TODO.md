@@ -13,4 +13,4 @@ reading potentially malformed data
 - Add tests
 - Add documentation
 # Bugs to be fixed
-- Scheduled plays _may_ fail to fire _(needs testing)_
+_Nothing currently_
