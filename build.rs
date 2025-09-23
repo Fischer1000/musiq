@@ -16,7 +16,8 @@ fn main() {
     let out_dir = std::env::var("OUT_DIR")
         .expect("No output directory environment variable set");
 
-    'file_embedding: {
+    #[allow(unused_labels)]
+    '_file_embedding: {
         let mut input_files = [
             "res/webpage/index.html",
             "res/webpage/styles.css",
@@ -50,12 +51,13 @@ fn main() {
         }
     }
 
-    'code_generation: {
+    #[allow(unused_labels)]
+    '_code_generation: {
         // The contents of the to-be generated.rs file
         let mut gen_rs_content = String::new();
 
         let target_volume = std::env::var("TARGET_VOLUME")
-            .unwrap_or("0.01".to_string())
+            .unwrap_or("0.1".to_string())
             .parse::<f32>()
             .expect("TARGET_VOLUME could not be parsed as a float");
 

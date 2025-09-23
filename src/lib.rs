@@ -60,10 +60,12 @@ pub enum Error {
     PathCannotBeCanonicalized,
     FileCannotBeDeleted,
     InvalidCSV,
-    DeviceConfigCannotBeSet,
+    OutputDeviceConfigCannotBeSet,
     StreamCannotBeBuilt,
     StreamCannotBePlayed,
-    NoOutputDevice
+    NoOutputDevice,
+    OutputDeviceConfigCannotBeQueried,
+    NoOutputDeviceConfigs
 }
 
 /// Sets up the program and runs the main loop,
@@ -134,6 +136,7 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
 
     let mut play_thread: Option<std::thread::JoinHandle<_>> = None;
 
+    #[allow(unused_labels)]
     '_main: loop {
         if let Ok((mut stream, _)) = listener.accept() {
             stream.set_nonblocking(false).map_err(|_| Error::CannotSetNonblocking)?;

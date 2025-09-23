@@ -4,6 +4,7 @@ compile-time environment variable of name `TARGET_VOLUME`
 - Modified `build.rs` to be able to generate a rust file to 
 store pre-evaluated constants and statics. These are imported into the `generated` module
 - Added `ENVVARS.md` to track expected environment variables
+- Made song playing auto-detect the default device's best configuration and use it.
 # 0.4.0
 - Internal compile-time warnings were addressed
 - Added volume normalization using the RMS (root-mean-square) method

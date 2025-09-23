@@ -12,5 +12,6 @@
 reading potentially malformed data
 - Add tests
 - Add documentation
+- Make `lib.rs`'s `Error` implement `std::Error`
 # Bugs to be fixed
 _Nothing currently_

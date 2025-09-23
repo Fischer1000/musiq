@@ -9,8 +9,8 @@ use std::sync::Mutex;
 
 use rand::{rng, seq::SliceRandom};
 use minimp3::{Decoder, Frame};
-use cpal::Device;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+use cpal::{SampleFormat, SampleRate, StreamConfig, Device};
 
 use crate::database::SongDatabase;
 use crate::{logln, or_return};
@@ -93,8 +93,8 @@ impl Song {
         let mut decoder = Decoder::new(BufReader::new(file));
         let mut samples = Vec::new();
 
-        let mut sample_rate = 44100;
-        let mut channels = 2;
+        let mut source_sample_rate = 44100;
+        let mut source_channels = 2;
 
         let mut sq_sum = 0.0;
 
@@ -104,8 +104,8 @@ impl Song {
                 sq_sum += sample * sample;
                 sample
             }));
-            sample_rate = sr;
-            channels = ch;
+            source_sample_rate = sr;
+            source_channels = ch;
         }
 
         sq_sum /= samples.len() as f32;
@@ -117,17 +117,30 @@ impl Song {
 
         let mut index: usize = 0;
 
-        let config = cpal::StreamConfig {
-            channels: channels as u16,
-            sample_rate: cpal::SampleRate(sample_rate as u32),
-            buffer_size: cpal::BufferSize::Default,
-        };
+        let config = or_return!(
+            or_return!(
+                device.supported_output_configs().ok(),
+                Err(Error::OutputDeviceConfigCannotBeQueried)
+            ).filter( |conf| {
+                conf.channels() as usize == source_channels &&
+                match conf.sample_format() {
+                    SampleFormat::F32 | SampleFormat::F64 => true,
+                    _ => false
+                }
+            } )
+            .max_by_key( |conf| conf.max_sample_rate() ),
+            Err(Error::NoOutputDeviceConfigs)
+        );
 
-        let config = config.into();
+        let config: StreamConfig = or_return!(
+            config.try_with_sample_rate(SampleRate(source_sample_rate as u32)),
+            Err(Error::OutputDeviceConfigCannotBeSet)
+        ).into();
 
-        let duration_secs = samples.len() as f64 / (sample_rate as f64 * channels as f64);
+        let duration_secs = samples.len() as f64 / (source_sample_rate as f64 * source_channels as f64);
 
-        let _guard = SONG_PLAYING_GATE.lock().unwrap(); // Unwrap so that panics cascade over threads
+        // Panic so that panics cascade over threads
+        let _guard = SONG_PLAYING_GATE.lock().expect("Song playing guard was poisoned");
 
         let stream = or_return!(
             device.build_output_stream(
@@ -159,6 +172,8 @@ impl Song {
         logln!("Playing \"{}\" ({:.1} seconds, RMS = {rms}, α={scale_factor})", self.filename.display(), duration_secs);
 
         std::thread::sleep(std::time::Duration::from_secs_f64(duration_secs));
+
+        logln!("Finished");
 
         Ok(())
     }
