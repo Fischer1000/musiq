@@ -14,12 +14,6 @@ use std::path::Path;
 
 use crate::time::{Time, Day};
 
-pub static SONG_FILES_DIR: &str = "./songs/";
-pub static CONFIG_FILE_PATH: &str = "./config.musiq";
-pub static DATABASE_FILE_NAME: &str = "db.csv";
-pub const PLAYLIST_LENGTH: usize = 1;
-pub const TIMEOUT: Option<core::time::Duration> = Some(core::time::Duration::from_secs(1));
-
 pub mod songs;
 mod macros;
 pub mod database;
@@ -29,8 +23,14 @@ pub mod embedded_files;
 pub mod csv;
 pub mod time;
 pub mod logging;
-
 pub mod generated { include!(concat!(env!("OUT_DIR"), "/generated.rs")); }
+
+
+pub static SONG_FILES_DIR: &str = "./songs/";
+pub static CONFIG_FILE_PATH: &str = "./config.musiq";
+pub static DATABASE_FILE_NAME: &str = "db.csv";
+pub const PLAYLIST_LENGTH: usize = 1;
+pub const TIMEOUT: Option<core::time::Duration> = Some(core::time::Duration::from_secs(1));
 
 #[derive(Debug)]
 #[non_exhaustive]

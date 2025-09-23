@@ -96,82 +96,21 @@ impl Song {
         let mut source_sample_rate = 44100;
         let mut source_channels = 2;
 
-        let mut sq_sum = 0.0;
-
         while let Ok(Frame { data, sample_rate: sr, channels: ch, .. }) = decoder.next_frame() {
             samples.extend(data.iter().map(|&s| {
-                let sample = s as f32 / i16::MAX as f32;
-                sq_sum += sample * sample;
-                sample
+                s as f32 / i16::MAX as f32
             }));
             source_sample_rate = sr;
             source_channels = ch;
         }
 
-        sq_sum /= samples.len() as f32;
-        let rms = sq_sum.sqrt();
-        let scale_factor = TARGET_VOLUME / rms;
-
-        // Scale all samples according to the calculated volume
-        samples.iter_mut().for_each(|s| *s *= scale_factor);
-
-        let mut index: usize = 0;
-
-        let config = or_return!(
-            or_return!(
-                device.supported_output_configs().ok(),
-                Err(Error::OutputDeviceConfigCannotBeQueried)
-            ).filter( |conf| {
-                conf.channels() as usize == source_channels &&
-                match conf.sample_format() {
-                    SampleFormat::F32 | SampleFormat::F64 => true,
-                    _ => false
-                }
-            } )
-            .max_by_key( |conf| conf.max_sample_rate() ),
-            Err(Error::NoOutputDeviceConfigs)
-        );
-
-        let config: StreamConfig = or_return!(
-            config.try_with_sample_rate(SampleRate(source_sample_rate as u32)),
-            Err(Error::OutputDeviceConfigCannotBeSet)
-        ).into();
+        let (rms, scale_factor) = normalize_samples(&mut samples, TARGET_VOLUME);
 
         let duration_secs = samples.len() as f64 / (source_sample_rate as f64 * source_channels as f64);
 
-        // Panic so that panics cascade over threads
-        let _guard = SONG_PLAYING_GATE.lock().expect("Song playing guard was poisoned");
-
-        let stream = or_return!(
-            device.build_output_stream(
-                &config,
-                move |data: &mut [f32], _| {
-                    if index >= samples.len() {
-                        data.fill(0.0);
-                        return;
-                    }
-
-                    let end = (index + data.len()).min(samples.len());
-                    let slice = &samples[index..end];
-                    data[..slice.len()].copy_from_slice(slice);
-
-                    if slice.len() < data.len() {
-                        data[slice.len()..].fill(0.0);
-                    }
-
-                    index += data.len();
-                },
-                |e| eprintln!("Unexpected error \"{e}\". This might be a panic in future versions."),
-                None,
-            ).ok(),
-            Err(Error::StreamCannotBeBuilt)
-        );
-
-        or_return!(stream.play().ok(), Err(Error::StreamCannotBePlayed));
-
         logln!("Playing \"{}\" ({:.1} seconds, RMS = {rms}, α={scale_factor})", self.filename.display(), duration_secs);
 
-        std::thread::sleep(std::time::Duration::from_secs_f64(duration_secs));
+        play_samples(samples.into_boxed_slice(), source_sample_rate as u32, source_channels as u16, device)?;
 
         logln!("Finished");
 
@@ -235,4 +174,79 @@ pub fn play_playlist(playlist: &[Song]) -> Result<(), Error> {
     }
 
     Ok(())
+}
+
+/// Plays the given samples with the given sample rate and channels on a given device
+fn play_samples(samples: Box<[f32]>, source_sample_rate: u32, source_channels: u16, device: &Device) -> Result<(), Error> {
+    let config = or_return!(
+            or_return!(
+                device.supported_output_configs().ok(),
+                Err(Error::OutputDeviceConfigCannotBeQueried)
+            ).filter( |conf| {
+                conf.channels() == source_channels &&
+                match conf.sample_format() {
+                    SampleFormat::F32 => true,
+                    _ => false
+                }
+            } )
+            .max_by_key( |conf| conf.max_sample_rate() ),
+            Err(Error::NoOutputDeviceConfigs)
+        );
+
+    let config: StreamConfig = or_return!(
+            config.try_with_sample_rate(SampleRate(source_sample_rate)),
+            Err(Error::OutputDeviceConfigCannotBeSet)
+        ).into();
+
+    let duration_secs = samples.len() as f64 / (source_sample_rate as f64 * source_channels as f64);
+
+    // Panic so that panics cascade over threads
+    let _guard = SONG_PLAYING_GATE.lock().expect("Song playing guard was poisoned");
+
+    let mut index: usize = 0;
+
+    let stream = or_return!(
+            device.build_output_stream(
+                &config,
+                move |data: &mut [f32], _| {
+                    if index >= samples.len() {
+                        data.fill(0.0);
+                        return;
+                    }
+
+                    let end = (index + data.len()).min(samples.len());
+                    let slice = &samples[index..end];
+                    data[..slice.len()].copy_from_slice(slice);
+
+                    if slice.len() < data.len() {
+                        data[slice.len()..].fill(0.0);
+                    }
+
+                    index += data.len();
+                },
+                |e| eprintln!("Unexpected error \"{e}\". This might be a panic in future versions."),
+                None,
+            ).ok(),
+            Err(Error::StreamCannotBeBuilt)
+        );
+
+    or_return!(stream.play().ok(), Err(Error::StreamCannotBePlayed));
+
+    std::thread::sleep(std::time::Duration::from_secs_f64(duration_secs));
+
+    Ok(())
+}
+
+/// Normalizes the samples to a given volume level. Returns the computed volume, and the scale factor.
+fn normalize_samples(samples: &mut [f32], target_volume: f32) -> (f32, f32) {
+    let mut sq_sum = 0.0;
+
+    samples.iter().for_each(|sample| sq_sum += sample * sample);
+
+    let rms = f32::sqrt(sq_sum / samples.len() as f32);
+    let scale_factor = target_volume / rms;
+
+    samples.iter_mut().for_each(|sample| *sample *= scale_factor);
+
+    (rms, scale_factor)
 }
