@@ -4,7 +4,6 @@
 - A "select all" option in the web UI
 - Adding the ability to add other scheduled events
 - Send the server's current time to the web UI
-- Remove features and instead use environment variables or command line arguments
 - Have a translation of the web UI
 - Finishing the event scheduling API
 - Add version information to the config file to prevent

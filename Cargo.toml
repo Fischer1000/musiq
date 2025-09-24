@@ -4,7 +4,6 @@ version = "0.5.0"
 edition = "2024"
 
 [features]
-only-local = []
 
 [dependencies]
 cpal = "0.16.0"

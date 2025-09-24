@@ -1,10 +1,15 @@
 # 0.5.0
+- Reworked the build script
 - Removed feature `use-encoding`. Use `ENCODING` optional compile-time
   environment variable instead.
 - Removed feature `no-logging`. Use `LOGGING` optional runtime
   environment variable instead.
 - Removed feature `debug-access`. Use `DEBUG` optional runtime
   environment variable instead.
+- Removed feature `only-local`. Use the first command line argument
+  to set the IP address to host on instead.
+- Changed the first command line argument's function to not only set the port
+  but also the whole IP address to host on
 # 0.4.1
 - Moved hard-coded target loudness value to an optional
   compile-time environment variable of name `TARGET_VOLUME`
