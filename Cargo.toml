@@ -1,13 +1,10 @@
 [package]
 name = "musiq"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2024"
 
 [features]
-debug-access = []
-use-encoding = ["dep:brotli"]
 only-local = []
-no-logging = []
 
 [dependencies]
 cpal = "0.16.0"
@@ -15,4 +12,4 @@ minimp3 = "0.6.1"
 rand = "0.9.2"
 
 [build-dependencies]
-brotli = { version = "8.0.2", optional = true }
+brotli = "8.0.2"

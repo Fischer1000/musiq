@@ -1,15 +1,22 @@
+# 0.5.0
+- Removed feature `use-encoding`. Use `ENCODING` optional compile-time
+  environment variable instead.
+- Removed feature `no-logging`. Use `LOGGING` optional runtime
+  environment variable instead.
+- Removed feature `debug-access`. Use `DEBUG` optional runtime
+  environment variable instead.
 # 0.4.1
 - Moved hard-coded target loudness value to an optional
-compile-time environment variable of name `TARGET_VOLUME`
-- Modified `build.rs` to be able to generate a rust file to 
-store pre-evaluated constants and statics. These are imported into the `generated` module
+  compile-time environment variable of name `TARGET_VOLUME`
+- Modified `build.rs` to be able to generate a rust file to store
+  pre-evaluated constants and statics. These are imported into the `generated` module
 - Added `ENVVARS.md` to track expected environment variables
 - Made song playing auto-detect the default device's best configuration and use it.
 # 0.4.0
 - Internal compile-time warnings were addressed
 - Added volume normalization using the RMS (root-mean-square) method
 - Added a featured called `no-logging`. This disables the logging functionality
-to write to the log file.
+  to write to the log file.
 - Made default configs one minute late to prevent playing early, and
 also disabled 6th and 7th breaks by default
 # 0.3.7

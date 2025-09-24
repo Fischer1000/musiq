@@ -12,6 +12,7 @@ use crate::embedded_files;
 use crate::csv::{CsvObject, DEFAULT_SEPARATOR};
 use crate::Error;
 use crate::songs::Song;
+use crate::generated::{Encoding, ENCODING};
 
 const MAX_BODY_SIZE: usize = 500_000_000;
 static METHODS_WITH_BODY: &[&str] = &["POST"];
@@ -341,25 +342,30 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
     let content_encoding: Option<&'static str>;
 
     let body = 'match_uri: {
+        let embedded_encoding = match ENCODING {
+            Encoding::Brotli => Some("br"),
+            Encoding::None => None
+        };
+
         match uri.without_query_parameters() {
             "/" => {
                 content_type = "text/html";
-                content_encoding = if cfg!(feature = "use-encoding") { Some("br") } else { None };
+                content_encoding = embedded_encoding;
                 embedded_files::INDEX_HTML
             },
             "/files/styles.css" => {
                 content_type = "text/css";
-                content_encoding = if cfg!(feature = "use-encoding") { Some("br") } else { None };
+                content_encoding = embedded_encoding;
                 embedded_files::STYLES_CSS
             },
             "/files/script.js" => {
                 content_type = "text/javascript";
-                content_encoding = if cfg!(feature = "use-encoding") { Some("br") } else { None };
+                content_encoding = embedded_encoding;
                 embedded_files::SCRIPT_JS
             },
             "/files/favicon.svg" => {
                 content_type = "image/svg+xml";
-                content_encoding = if cfg!(feature = "use-encoding") { Some("br") } else { None };
+                content_encoding = embedded_encoding;
                 embedded_files::FAVICON_SVG
             },
             #[allow(unused_parens)]
@@ -400,8 +406,7 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                     DEFAULT_SEPARATOR,
                 ).into_bytes()
             }),
-            #[cfg(feature = "debug-access")]
-            "/data/server-time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
+            // "/data/server-time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
             _ => return Response::not_found(),
         }.to_vec()
     };

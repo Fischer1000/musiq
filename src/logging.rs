@@ -3,9 +3,8 @@ use std::sync::{Mutex, atomic};
 use std::fs::{File, OpenOptions};
 
 static LOG_FILE: Mutex<Option<File>> = Mutex::new(None);
-// `cfg!(...)` to prevent even trying to open the log file if we don't want to log
-static FILE_OPEN_FAILED: atomic::AtomicBool = atomic::AtomicBool::new(cfg!(feature = "no-logging"));
-
+static FILE_OPEN_FAILED: atomic::AtomicBool = atomic::AtomicBool::new(false);
+static CAN_LOG: Mutex<Option<bool>> = Mutex::new(None);
 static LOG_FILE_PATH: &'static str = "./latest.log";
 
 #[macro_export]
@@ -33,11 +32,27 @@ macro_rules! logln_dbg {
 
 /// Writes a buffer to the log file and silently succeed if it cannot be written to.
 pub fn write_to_log(data: &str) {
+    let can_log: bool =  {
+        let mut guard = CAN_LOG.lock().unwrap();
+
+        let result: bool;
+
+        match *guard {
+            None => *guard = match std::env::var("LOGGING").as_deref() {
+                Ok("false") => { result = false; Some(false) },
+                Err(_) | Ok(_) => { result = true; Some(true) }
+            },
+            Some(v) => result = v
+        }
+
+        result
+    };
+
     let mut guard = LOG_FILE.lock().unwrap();
 
     let file = match guard.as_mut() {
         Some(file) => file,
-        None => if !FILE_OPEN_FAILED.load(atomic::Ordering::Relaxed) {
+        None => if !FILE_OPEN_FAILED.load(atomic::Ordering::Relaxed) && can_log {
             let tmp = OpenOptions::new().write(true).append(true).create(true).open(LOG_FILE_PATH);
             match tmp {
                 Ok(file) => { *guard = Some(file); guard.as_mut().unwrap() },

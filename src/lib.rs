@@ -4,7 +4,7 @@
     unnameable_types, unreachable_pub, variant_size_differences
 )]
 // #![warn(missing_docs, missing_debug_implementations)]
-#![deny(keyword_idents, unsafe_op_in_unsafe_fn)]
+#![deny(keyword_idents, unsafe_op_in_unsafe_fn, unexpected_cfgs)]
 #![forbid(deprecated_safe_2024, non_ascii_idents, unused_crate_dependencies)]
 
 use std::convert::Infallible;
@@ -23,7 +23,18 @@ pub mod embedded_files;
 pub mod csv;
 pub mod time;
 pub mod logging;
-pub mod generated { include!(concat!(env!("OUT_DIR"), "/generated.rs")); }
+pub mod generated {
+    /// The possible file encodings the embedded files can be encoded with
+    #[non_exhaustive]
+    pub enum Encoding {
+        /// Brotli encoding provided by the `brotli` crate
+        Brotli,
+        /// No encoding
+        None
+    }
+    
+    include!(concat!(env!("OUT_DIR"), "/generated.rs"));
+}
 
 
 pub static SONG_FILES_DIR: &str = "./songs/";
