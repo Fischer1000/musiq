@@ -32,7 +32,7 @@ fn main() {
         let file_iter = input_files.into_iter().zip(output_files.into_iter());
 
         match encoding.as_deref() {
-            None | Some("none") => {
+            Some("none") => {
                 for (file_in, file_out) in file_iter {
                     std::fs::copy(file_in, file_out).expect("To be embedded file cannot be copied");
                 }
@@ -58,7 +58,7 @@ fn main() {
 
                 encoding_variant = "Brotli";
             },
-            Some("gzip") => {
+            None | Some("gzip") => {
                 for (file_in, file_out) in file_iter {
                     let file_in = std::fs::File::open(file_in).expect("Input file cannot be opened");
                     let mut input = flate2::read::GzEncoder::new(&file_in, flate2::Compression::best());
