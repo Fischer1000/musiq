@@ -13,34 +13,34 @@ fn main() {
     let encoding = std::env::var("ENCODING").ok();
     let encoding_variant: &'static str;
 
+    let input_files = [
+        "res/webpage/index.html",
+        "res/webpage/styles.css",
+        "res/webpage/script.js",
+        "res/webpage/favicon.svg"
+    ];
+
+    let output_files = [
+        (format!("{out_dir}/index.html.bin"), "INDEX_HTML"),
+        (format!("{out_dir}/styles.css.bin"), "STYLES_CSS"),
+        (format!("{out_dir}/script.js.bin"), "SCRIPT_JS"),
+        (format!("{out_dir}/favicon.svg.bin"), "FAVICON_SVG"),
+    ];
+
     #[allow(unused_labels)]
     '_file_embedding: {
-        let input_files = [
-            "res/webpage/index.html",
-            "res/webpage/styles.css",
-            "res/webpage/script.js",
-            "res/webpage/favicon.svg"
-        ];
-
-        let output_files = [
-            format!("{out_dir}/index.html"),
-            format!("{out_dir}/styles.css"),
-            format!("{out_dir}/script.js"),
-            format!("{out_dir}/favicon.svg")
-        ];
-
-        let file_iter = input_files.into_iter().zip(output_files.into_iter());
+        let file_iter = input_files.iter().zip(output_files.iter());
 
         match encoding.as_deref() {
             Some("none") => {
-                for (file_in, file_out) in file_iter {
+                for (file_in, (file_out, _)) in file_iter {
                     std::fs::copy(file_in, file_out).expect("To be embedded file cannot be copied");
                 }
 
                 encoding_variant = "None";
             }
             Some("brotli") => {
-                for (file_in, file_out) in file_iter {
+                for (file_in, (file_out, _)) in file_iter {
                     let file_in = std::fs::File::open(file_in).expect("Input file cannot be opened");
                     let mut input = brotli::CompressorReader::new(
                         file_in,
@@ -59,7 +59,7 @@ fn main() {
                 encoding_variant = "Brotli";
             },
             None | Some("gzip") => {
-                for (file_in, file_out) in file_iter {
+                for (file_in, (file_out, _)) in file_iter {
                     let file_in = std::fs::File::open(file_in).expect("Input file cannot be opened");
                     let mut input = flate2::read::GzEncoder::new(&file_in, flate2::Compression::best());
 
@@ -81,24 +81,46 @@ fn main() {
         // The contents of the to-be generated.rs file
         let mut gen_rs_content = String::new();
 
-        let target_volume = std::env::var("TARGET_VOLUME")
-            .unwrap_or("0.1".to_string())
-            .parse::<f32>()
-            .expect("TARGET_VOLUME could not be parsed as a float");
+        '_embedded_files: {
+            let mut buf = "pub mod embedded_files {\n".to_string();
 
-        if target_volume < -1.0 || target_volume > 1.0 {
-            panic!("TARGET_VOLUME must be in range [-1, 1].");
+            for (path, name) in output_files.iter() {
+                buf.push_str(
+                    &format!(
+                        "\tpub static {}: &'static [u8] = include_bytes!(\"{}\");\n",
+                        name,
+                        path.escape_default()
+                    )
+                )
+            }
+
+            buf.push_str("}\n");
+
+            gen_rs_content.push_str(&buf);
         }
 
-        gen_rs_content.push_str(&format!(
-            "/// The target loudness of the normalized songs\npub const TARGET_VOLUME: f32 = {};\n",
-            target_volume
-        ));
+        '_target_volume: {
+            let target_volume = std::env::var("TARGET_VOLUME")
+                .unwrap_or("0.1".to_string())
+                .parse::<f32>()
+                .expect("TARGET_VOLUME could not be parsed as a float");
 
-        gen_rs_content.push_str(&format!(
-            "/// The encoding of the embedded files\npub const ENCODING: Encoding = Encoding::{};\n",
-            encoding_variant
-        ));
+            if target_volume < -1.0 || target_volume > 1.0 {
+                panic!("TARGET_VOLUME must be in range [-1, 1].");
+            }
+
+            gen_rs_content.push_str(&format!(
+                "/// The target loudness of the normalized songs\npub const TARGET_VOLUME: f32 = {};\n",
+                target_volume
+            ));
+        }
+
+        '_encoding: {
+            gen_rs_content.push_str(&format!(
+                "/// The encoding of the embedded files\npub const ENCODING: Encoding = Encoding::{};\n",
+                encoding_variant
+            ));
+        }
 
         std::fs::write(format!("{out_dir}/generated.rs"), gen_rs_content).expect("Failed to write to generated.rs");
     }

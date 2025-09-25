@@ -19,7 +19,6 @@ mod macros;
 pub mod database;
 pub mod config;
 pub mod webserver;
-pub mod embedded_files;
 pub mod csv;
 pub mod time;
 pub mod logging;
@@ -136,8 +135,8 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
         Err(e) => {
             match e {
                 Error::CannotReadFile => {
-                    std::fs::write(&config_file_path, embedded_files::CONFIG_MUSIQ).unwrap();
-                    config::Configs::from_bytes(embedded_files::CONFIG_MUSIQ, &config_file_path).unwrap()
+                    std::fs::write(&config_file_path, &config::default_config_bytes()).unwrap();
+                    config::Configs::from_bytes(&config::default_config_bytes(), &config_file_path).unwrap()
                 },
                 _ => {
                     eprintln!("Config file is invalid.\nTerminating...");

@@ -3,6 +3,7 @@
 - Added `gzip` encoding
 - Made `gzip` encoding the default instead of `none`
 - Modified the style of `CHANGELOG.md` and `ENVVARS.md`
+- Moved `embedded_files.rs`'s contents into `generated.rs` and removed it
 ## 0.5.0
 - Reworked the build script
 - Removed feature `use-encoding`. Use `ENCODING` optional compile-time

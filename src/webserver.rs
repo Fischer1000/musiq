@@ -6,9 +6,8 @@ use std::io::{BufReader, Write, Read};
 use std::mem::MaybeUninit;
 use std::path::Path;
 
-use crate::{logln, or_continue, or_return, songs, time};
+use crate::{generated, logln, or_continue, or_return, songs, time};
 use crate::config::Configs;
-use crate::embedded_files;
 use crate::csv::{CsvObject, DEFAULT_SEPARATOR};
 use crate::Error;
 use crate::songs::Song;
@@ -352,22 +351,22 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
             "/" => {
                 content_type = "text/html";
                 content_encoding = embedded_encoding;
-                embedded_files::INDEX_HTML
+                generated::embedded_files::INDEX_HTML
             },
             "/files/styles.css" => {
                 content_type = "text/css";
                 content_encoding = embedded_encoding;
-                embedded_files::STYLES_CSS
+                generated::embedded_files::STYLES_CSS
             },
             "/files/script.js" => {
                 content_type = "text/javascript";
                 content_encoding = embedded_encoding;
-                embedded_files::SCRIPT_JS
+                generated::embedded_files::SCRIPT_JS
             },
             "/files/favicon.svg" => {
                 content_type = "image/svg+xml";
                 content_encoding = embedded_encoding;
-                embedded_files::FAVICON_SVG
+                generated::embedded_files::FAVICON_SVG
             },
             #[allow(unused_parens)]
             "/data/timetable.csv" => break 'match_uri ({
