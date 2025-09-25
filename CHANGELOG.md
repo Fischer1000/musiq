@@ -1,3 +1,5 @@
+# 0.5.1
+- Added `gzip` encoding
 # 0.5.0
 - Reworked the build script
 - Removed feature `use-encoding`. Use `ENCODING` optional compile-time

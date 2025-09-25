@@ -29,6 +29,8 @@ pub mod generated {
     pub enum Encoding {
         /// Brotli encoding provided by the `brotli` crate
         Brotli,
+        /// Gzip encoding from the `flate2` crate
+        Gzip,
         /// No encoding
         None
     }

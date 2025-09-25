@@ -1,5 +1,6 @@
 use brotli;
 use std::io::{Read, Write};
+use flate2;
 
 const BUF_SIZE: usize = 4096;
 const COMP_QUALITY: u32 = 11;
@@ -57,6 +58,20 @@ fn main() {
 
                 encoding_variant = "Brotli";
             },
+            Some("gzip") => {
+                for (file_in, file_out) in file_iter {
+                    let file_in = std::fs::File::open(file_in).expect("Input file cannot be opened");
+                    let mut input = flate2::read::GzEncoder::new(&file_in, flate2::Compression::best());
+
+                    let mut buf = Vec::new();
+                    input.read_to_end(&mut buf).expect("Error during input file reading");
+
+                    let mut file_out = std::fs::File::create(file_out).expect("Output file cannot be opened");
+                    file_out.write_all(&buf).expect("Error during output file writing");
+                }
+
+                encoding_variant = "Gzip";
+            }
             Some(_) => panic!("Unsupported file encoding")
         }
     }

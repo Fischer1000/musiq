@@ -344,6 +344,7 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
     let body = 'match_uri: {
         let embedded_encoding = match ENCODING {
             Encoding::Brotli => Some("br"),
+            Encoding::Gzip => Some("gzip"),
             Encoding::None => None
         };
 
