@@ -6,6 +6,18 @@ const BUF_SIZE: usize = 4096;
 const COMP_QUALITY: u32 = 11;
 const LG_WINDOW_SIZE: u32 = 21;
 
+static GENERATED_RS_BASE: &str =
+r#"/// The possible file encodings the embedded files can be encoded with
+#[non_exhaustive]
+pub enum Encoding {
+    /// Brotli encoding provided by the `brotli` crate
+    Brotli,
+    /// Gzip encoding from the `flate2` crate
+    Gzip,
+    /// No encoding
+    None
+}"#;
+
 fn main() {
     let out_dir = std::env::var("OUT_DIR")
         .expect("No output directory environment variable set");
@@ -79,7 +91,15 @@ fn main() {
     #[allow(unused_labels)]
     '_code_generation: {
         // The contents of the to-be generated.rs file
-        let mut gen_rs_content = String::new();
+        let mut gen_rs_content = String::from(GENERATED_RS_BASE);
+        gen_rs_content.push_str("\n\n");
+
+        '_generated_directory: {
+            gen_rs_content.push_str(&format!(
+                "/// The directory in which the files are generated\npub static GENERATED_DIRECTORY: &'static str = \"{}\";\n\n",
+                out_dir.escape_default())
+            );
+        }
 
         '_embedded_files: {
             let mut buf = "pub mod embedded_files {\n".to_string();
@@ -94,7 +114,7 @@ fn main() {
                 )
             }
 
-            buf.push_str("}\n");
+            buf.push_str("}\n\n");
 
             gen_rs_content.push_str(&buf);
         }
@@ -110,18 +130,19 @@ fn main() {
             }
 
             gen_rs_content.push_str(&format!(
-                "/// The target loudness of the normalized songs\npub const TARGET_VOLUME: f32 = {};\n",
+                "/// The target loudness of the normalized songs\npub const TARGET_VOLUME: f32 = {};\n\n",
                 target_volume
             ));
         }
 
         '_encoding: {
             gen_rs_content.push_str(&format!(
-                "/// The encoding of the embedded files\npub const ENCODING: Encoding = Encoding::{};\n",
+                "/// The encoding of the embedded files\npub const ENCODING: Encoding = Encoding::{};\n\n",
                 encoding_variant
             ));
         }
 
-        std::fs::write(format!("{out_dir}/generated.rs"), gen_rs_content).expect("Failed to write to generated.rs");
+        std::fs::write(format!("{out_dir}/generated.rs"), gen_rs_content)
+            .expect("Failed to write to generated.rs");
     }
 }

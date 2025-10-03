@@ -1,4 +1,5 @@
 pub const DEFAULT_SEPARATOR: char = ',';
+pub const DEFAULT_STR_MARKER: char = '"';
 
 /// A single value that can be represented in CSV
 #[derive(Debug, Clone)]
@@ -17,33 +18,33 @@ pub enum CsvObject {
 
 impl CsvObject {
     /// Converts a CSV-encoded `&str` into a vector of the vectors of the values.\
-    /// Each vector stores one row from the original data.\
-    /// This function assumes that strings are marked with double-quotes (`"`) at both ends.
+    /// Each vector stores one row from the original data.
     /// # Note
-    /// While usual implementations of CSV parsing don't split strings in the middle if they contain
-    /// the separator character, this one does, because this use case is not needed for this project.
-    pub fn from_str(s: &str, sep: char) -> Vec<Vec<CsvObject>> {
+    /// When this function encounters a section, that it cannot parse,
+    /// it replaces it with `CsvObject::Null`.
+    pub fn from_str(s: &str, sep: char, str_mkr: char) -> Vec<Vec<CsvObject>> {
         let mut result: Vec<Vec<CsvObject>> = Vec::new();
         let mut line_buf: Vec<CsvObject> = Vec::new();
 
-        '_lines: for line in s.lines() {
-            '_values: for val in line.split(sep) {
+        for line in s.lines() { // lines
+            let mut in_str = false;
+            for val in line.split(|c| { if c == str_mkr { in_str = !in_str }; !in_str && c == sep }) { // values
                 let val = val.trim();
                 line_buf.push( match val {
-                    "" | "\"" => CsvObject::Null,
                     "false" => CsvObject::Bool(false),
                     "true" => CsvObject::Bool(true),
+                    x if (x.starts_with(str_mkr) && x.len() == 1) || x.is_empty() => CsvObject::Null,
                     _ => 'nontrivial: {
-                        if let Some(remainder) = val.strip_prefix("\"") {
-                            if let Some(middle) = remainder.strip_suffix("\"") {
-                                break 'nontrivial CsvObject::String(middle.into());
+                        if let Some(remainder) = val.strip_prefix(str_mkr) {
+                            if let Some(middle) = remainder.strip_suffix(str_mkr) {
+                                break 'nontrivial middle.into();
                             }
                         }
                         if let Ok(int) = val.parse::<i64>() {
-                            break 'nontrivial CsvObject::Int(int);
+                            break 'nontrivial int.into();
                         }
                         if let Ok(float) = val.parse::<f64>() {
-                            break 'nontrivial CsvObject::Float(float);
+                            break 'nontrivial float.into();
                         }
                         CsvObject::Null
                     }
@@ -59,14 +60,14 @@ impl CsvObject {
     /// Serializes a vector of the vectors of CSV values into a single string.\
     /// The separator is applied between values with no whitespace around it.\
     /// The rows are separated by the CRLF sequence (`\r\n`).
-    pub fn serialize(values: Vec<Vec<CsvObject>>, sep: char) -> String {
+    pub fn serialize(values: Vec<Vec<CsvObject>>, sep: char, str_mkr: char) -> String {
         let mut result = String::new();
 
         for line in values {
             for (i, val) in line.iter().enumerate() {
                 result.push_str( match val {
                     CsvObject::Null => String::new(),
-                    CsvObject::String(s) => format!("\"{s}\""),
+                    CsvObject::String(s) => format!("{str_mkr}{s}{str_mkr}"),
                     CsvObject::Int(i) => format!("{i}"),
                     CsvObject::Float(f) => format!("{f}"),
                     CsvObject::Bool(b) => format!("{b}"),

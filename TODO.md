@@ -12,4 +12,4 @@ reading potentially malformed data
 - Add documentation
 - Make `lib.rs`'s `Error` implement `std::Error`
 # Bugs to be fixed
-_Nothing currently_
+- Song randomization seems off

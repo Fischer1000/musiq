@@ -1,4 +1,10 @@
 # Changelog
+## 0.5.2
+- Fixed a bug, where songs containing commas in their filenames
+had caused a startup crash, and `NaN` was displayed on the web UI.
+- Made the program display the generated file's directory if it is
+started with the `DEBUG` environment variable set to `true`
+- Modified default breaks to play music in to include the 1st break.
 ## 0.5.1
 - Added `gzip` encoding
 - Made `gzip` encoding the default instead of `none`

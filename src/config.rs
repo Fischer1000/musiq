@@ -406,7 +406,7 @@ pub const fn default_config_bytes() -> [u8; 54] {
 
     let breaks = breaks.as_flattened(); // &[u8; 40]
 
-    let days = [0b00111100; 5];
+    let days = [0b01111100; 5];
 
     let mut i = 0;
 

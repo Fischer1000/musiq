@@ -17,6 +17,9 @@ const params = new URLSearchParams(window.location.search);
 
 const noRefresh = params.has('norefresh');
 
+const defaultSeparator = ',';
+const defaultStrMarker = '"';
+
 // Song upload
 songInput.addEventListener('change', function () {
     const count = songInput.files.length;
@@ -263,15 +266,40 @@ function submitMultipleFiles(event, callback = () => {}) {
     }
 }
 
+// Split a string at the given separator values, while skipping splitting inside the markers
+function splitWithMarker(input, sep, str_mkr) {
+    const result = [];
+    let current = "";
+
+    let in_str = false;
+
+    for (let i = 0; i < input.length; i++) {
+        if (input[i] === str_mkr) { in_str = !in_str; }
+        if (!in_str && (input[i] === sep)) {
+            result.push(current);
+            current = "";
+        } else {
+            current += input[i];
+        }
+    }
+
+    result.push(current);
+
+    return result;
+}
+
 // Parse a css line to JS values
-function csvToValue(csvLine) {
+function csvToValue(csvLine, sep, str_mkr) {
     if (csvLine.length === 0) {
         return [];
     }
 
     let result = [];
 
-    for (const val of csvLine.split(',')) {
+    let in_str = false;
+    const split = splitWithMarker(csvLine, sep, str_mkr);
+
+    for (const val of split) {
         if (val === '') {
             result.push(null);
         } else if ((val[0] === '\"') && (val[val.length - 1] === '\"')) {
@@ -316,7 +344,7 @@ fetch("data/timetable.csv")
     })
     .then(csvText => {
         // Simple CSV parsing (splitting by newlines and commas)
-        const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line));
+        const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
         const days = ["mon", "tue", "wed", "thu", "fri"];
 
         for (let i = 0; i < 5; i++) {
@@ -337,7 +365,7 @@ fetch("data/breaks.csv")
     })
     .then(csvText => {
         // Simple CSV parsing (splitting by newlines and commas)
-        const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line));
+        const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
 
         for (let i = 0; i < 8; i++) {
             document.getElementById("break-start" + i).value = csvRows[i][0]
@@ -376,7 +404,7 @@ fetch("data/songs.csv")
         return res.text();
     })
     .then(csvText => {
-        const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line));
+        const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
 
         for (const csvRow of csvRows) {
             if (csvRow.length === 0) {

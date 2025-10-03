@@ -8,7 +8,7 @@ use std::path::Path;
 
 use crate::{generated, logln, or_continue, or_return, songs, time};
 use crate::config::Configs;
-use crate::csv::{CsvObject, DEFAULT_SEPARATOR};
+use crate::csv::{CsvObject, DEFAULT_SEPARATOR, DEFAULT_STR_MARKER};
 use crate::Error;
 use crate::songs::Song;
 use crate::generated::{Encoding, ENCODING};
@@ -375,6 +375,7 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                 CsvObject::serialize(
                     configs.get_timetable_csv(),
                     DEFAULT_SEPARATOR,
+                    DEFAULT_STR_MARKER
                 ).into_bytes()
             }),
             #[allow(unused_parens)]
@@ -384,6 +385,7 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                 CsvObject::serialize(
                     configs.get_breaks_csv(),
                     DEFAULT_SEPARATOR,
+                    DEFAULT_STR_MARKER
                 ).into_bytes()
             }),
             "/data/utc-offset.bin" => return Response::new(
@@ -404,6 +406,7 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                 CsvObject::serialize(
                     database.get_songs_csv(),
                     DEFAULT_SEPARATOR,
+                    DEFAULT_STR_MARKER
                 ).into_bytes()
             }),
             // "/data/server-time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
@@ -430,7 +433,8 @@ macro_rules! csv_from_utf8_or_return {
                 str::from_utf8($bytes).ok(),
                 $error
             ),
-            DEFAULT_SEPARATOR
+            DEFAULT_SEPARATOR,
+            DEFAULT_STR_MARKER
         )
     };
 }

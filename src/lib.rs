@@ -22,20 +22,7 @@ pub mod webserver;
 pub mod csv;
 pub mod time;
 pub mod logging;
-pub mod generated {
-    /// The possible file encodings the embedded files can be encoded with
-    #[non_exhaustive]
-    pub enum Encoding {
-        /// Brotli encoding provided by the `brotli` crate
-        Brotli,
-        /// Gzip encoding from the `flate2` crate
-        Gzip,
-        /// No encoding
-        None
-    }
-    
-    include!(concat!(env!("OUT_DIR"), "/generated.rs"));
-}
+pub mod generated { include!(concat!(env!("OUT_DIR"), "/generated.rs")); }
 
 
 pub static SONG_FILES_DIR: &str = "./songs/";
@@ -123,7 +110,8 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
                             ).as_slice()
                         ).ok(),
                         Err(Error::InvalidDatabaseFile)),
-                    csv::DEFAULT_SEPARATOR
+                    csv::DEFAULT_SEPARATOR,
+                    csv::DEFAULT_STR_MARKER
                 )
             ).ok(),
             Err(Error::InvalidDatabaseFile)
@@ -170,7 +158,8 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
                 &database_file_name,
                 csv::CsvObject::serialize(
                     database.get_songs_csv(),
-                    csv::DEFAULT_SEPARATOR
+                    csv::DEFAULT_SEPARATOR,
+                    csv::DEFAULT_STR_MARKER
                 )
             );
         }
