@@ -41,12 +41,12 @@ impl CsvObject {
                             }
                         }
                         if let Ok(int) = val.parse::<i64>() {
-                            break 'nontrivial int.into();
+                            int.into()
+                        } else if let Ok(float) = val.parse::<f64>() {
+                            float.into()
+                        } else {
+                            CsvObject::Null
                         }
-                        if let Ok(float) = val.parse::<f64>() {
-                            break 'nontrivial float.into();
-                        }
-                        CsvObject::Null
                     }
                 } );
             }

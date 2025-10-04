@@ -22,50 +22,17 @@ pub mod webserver;
 pub mod csv;
 pub mod time;
 pub mod logging;
+mod error;
+
 pub mod generated { include!(concat!(env!("OUT_DIR"), "/generated.rs")); }
 
+pub use crate::error::Error;
 
 pub static SONG_FILES_DIR: &str = "./songs/";
 pub static CONFIG_FILE_PATH: &str = "./config.musiq";
 pub static DATABASE_FILE_NAME: &str = "db.csv";
 pub const PLAYLIST_LENGTH: usize = 1;
 pub const TIMEOUT: Option<core::time::Duration> = Some(core::time::Duration::from_secs(1));
-
-#[derive(Debug)]
-#[non_exhaustive]
-pub enum Error {
-    CannotBind,
-    CannotSetNonblocking,
-    RequestReadFailed,
-    InvalidRequest,
-    CannotInferLength,
-    InvalidUtf8,
-    UnsupportedMethod,
-    BodyTooLarge,
-    InvalidConfigFile,
-    DatabaseDirectoryCannotBeRead,
-    DatabaseFileCannotBeRead,
-    InvalidDatabaseFile,
-    ConfigFileCannotBeRead,
-    CannotReadFile,
-    CannotOpenFile,
-    NoTimetableFound,
-    CannotWriteFile,
-    DirectoryCannotBeRead,
-    CannotCopyNewFile,
-    InvalidNewFileName,
-    EntryCreationFailed,
-    EntryAlreadyExists,
-    PathCannotBeCanonicalized,
-    FileCannotBeDeleted,
-    InvalidCSV,
-    OutputDeviceConfigCannotBeSet,
-    StreamCannotBeBuilt,
-    StreamCannotBePlayed,
-    NoOutputDevice,
-    OutputDeviceConfigCannotBeQueried,
-    NoOutputDeviceConfigs
-}
 
 /// Sets up the program and runs the main loop,
 /// which then calls handles for TCP requests, and handles time-related events.

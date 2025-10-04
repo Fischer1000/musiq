@@ -29,6 +29,6 @@ fn main() {
 
     match musiq::main(host_address, musiq::SONG_FILES_DIR, has_allowed_extension, musiq::CONFIG_FILE_PATH) {
         Ok(_) => unreachable!(),
-        Err(err) => if debug_mode { println!("Program exited with error {err:?}"); }
+        Err(err) => if debug_mode { println!("Program exited with error {err}"); }
     }
 }
