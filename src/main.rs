@@ -39,7 +39,7 @@ fn main() {
             Err(err) => if debug_mode { println!("Program exited with error {err}"); }
         }
     } else if args.contains(&"-R".to_string()) { // Reset played status of all songs
-        match musiq::disable_all(musiq::SONG_FILES_DIR, has_allowed_extension) {
+        match musiq::reset_played(musiq::SONG_FILES_DIR, has_allowed_extension) {
             Ok(_) => {},
             Err(err) => if debug_mode { println!("Program exited with error {err}"); }
         }

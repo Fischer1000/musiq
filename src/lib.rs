@@ -11,7 +11,6 @@ use std::convert::Infallible;
 use std::io::Write;
 use std::net::{TcpListener, ToSocketAddrs};
 use std::path::Path;
-
 use crate::time::{Time, Day};
 
 pub mod songs;
@@ -200,6 +199,15 @@ pub fn enable_all<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
 
     database.enable_all();
 
+    let _ = std::fs::write(
+        &database_file_name,
+        csv::CsvObject::serialize(
+            database.get_songs_csv(),
+            csv::DEFAULT_SEPARATOR,
+            csv::DEFAULT_STR_MARKER
+        )
+    );
+
     Ok(())
 }
 
@@ -207,7 +215,7 @@ pub fn disable_all<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
     database_path: P,
     database_filter: F,
 ) -> Result<(), Error> {
-    logln!("Enabling all songs...");
+    logln!("Disabling all songs...");
 
     let database_path = database_path.as_ref();
     let database_file_name = database_path.join(DATABASE_FILE_NAME);
@@ -247,6 +255,15 @@ pub fn disable_all<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
 
     database.disable_all();
 
+    let _ = std::fs::write(
+        &database_file_name,
+        csv::CsvObject::serialize(
+            database.get_songs_csv(),
+            csv::DEFAULT_SEPARATOR,
+            csv::DEFAULT_STR_MARKER
+        )
+    );
+
     Ok(())
 }
 
@@ -254,7 +271,7 @@ pub fn reset_played<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
     database_path: P,
     database_filter: F,
 ) -> Result<(), Error> {
-    logln!("Enabling all songs...");
+    logln!("Resetting played status of all songs...");
 
     let database_path = database_path.as_ref();
     let database_file_name = database_path.join(DATABASE_FILE_NAME);
@@ -293,6 +310,15 @@ pub fn reset_played<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
     );
 
     database.reset_played();
+
+    let _ = std::fs::write(
+        &database_file_name,
+        csv::CsvObject::serialize(
+            database.get_songs_csv(),
+            csv::DEFAULT_SEPARATOR,
+            csv::DEFAULT_STR_MARKER
+        )
+    );
 
     Ok(())
 }
