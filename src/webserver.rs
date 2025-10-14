@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::convert::Infallible;
 use std::ffi::OsStr;
 use std::net::{TcpListener, ToSocketAddrs, TcpStream};
@@ -489,7 +488,7 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
             let mut success: u16 = 0;
 
             for name in first_line_from_utf8_csv_or_return!(body.as_slice(), Response::bad_request()) {
-                let songs = database
+                /*let songs = database
                     .inner()
                     .iter()
                     .map(|song| if song.filename() == OsStr::new(name) {
@@ -502,7 +501,15 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
                     })
                     .collect::<HashSet<_>>();
 
-                *database.inner_mut() = songs;
+                *database.inner_mut() = songs;*/
+                database
+                    .inner_mut()
+                    .iter_mut()
+                    .for_each(
+                        |song| if song.filename() == OsStr::new(name) {
+                            song.set_enabled(false)
+                        }
+                    )
             }
 
             if success == 0 {
@@ -515,20 +522,14 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
             let mut success: u16 = 0;
 
             for name in first_line_from_utf8_csv_or_return!(body.as_slice(), Response::bad_request()) {
-                let songs = database
-                    .inner()
-                    .iter()
-                    .map(|song| if song.filename() == OsStr::new(name) {
-                        let mut s = song.clone();
-                        s.set_enabled(true);
-                        success += 1;
-                        s
-                    } else {
-                        song.clone()
-                    })
-                    .collect::<HashSet<_>>();
-
-                *database.inner_mut() = songs;
+                database
+                    .inner_mut()
+                    .iter_mut()
+                    .for_each(
+                        |song| if song.filename() == OsStr::new(name) {
+                            song.set_enabled(true)
+                        }
+                    )
             }
 
             if success == 0 {

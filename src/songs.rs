@@ -139,27 +139,38 @@ impl std::cmp::PartialEq for Song {
 /// Composes a playlist with the given number of elements from a database's songs.
 pub fn compose_playlist(elem_cnt: usize, database: &mut SongDatabase) -> Option<Vec<Song>> {
     let mut elems: Vec<_> = database
-        .inner()
-        .iter()
-        .filter_map(|e| if e.enabled() && !e.was_played() { Some(e.to_owned()) } else { None })
+        .inner_mut()
+        .iter_mut()
+        .filter_map(|e| if e.enabled() && !e.was_played() { Some(e) } else { None })
         .collect();
 
     if elem_cnt > elems.len() {
+        /*
         database.reset_played();
         let elems = or_return!(compose_playlist(elem_cnt, database), None);
         if elems.is_empty() { // If resetting solved it, no need to return None
-            return None; // Prevent an infinite loop
+            None // Prevent an infinite loop
         }
+        */
+        return None;
     }
 
     elems.shuffle(&mut rng());
 
     elems.truncate(elem_cnt);
 
-    let elems = elems.iter().map(|e| { let mut tmp = (*e).clone(); tmp.set_played(true); tmp }).collect::<Vec<_>>();
+    /*
+    let elems = elems.iter().map(|e| {
+        let mut tmp = (*e).clone();
+        tmp.set_played(true);
+        tmp
+    }).collect::<Vec<_>>();
     database.inner_mut().extend(elems.iter().cloned());
+    */
 
-    Some(elems)
+    let playlist = elems.into_iter().map(|mut song| { song.set_played(true); song.clone() }).collect::<Vec<_>>();
+
+    Some(playlist)
 }
 
 /// Plays each song in a playlist sequentially.

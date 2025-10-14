@@ -156,6 +156,147 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
     }
 }
 
+pub fn enable_all<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
+    database_path: P,
+    database_filter: F,
+) -> Result<(), Error> {
+    logln!("Enabling all songs...");
+
+    let database_path = database_path.as_ref();
+    let database_file_name = database_path.join(DATABASE_FILE_NAME);
+
+    let _ = std::fs::create_dir(SONG_FILES_DIR);
+
+    let mut database = match database::SongDatabase::from_directory_filtered(database_path, database_filter) {
+        Ok(database) => database,
+        Err(e) => {
+            match e {
+                Error::DirectoryCannotBeRead => {
+                    eprintln!("The directory of the songs cannot be read.\nTerminating...");
+                }
+                _ => eprintln!("Unexpected error while trying to read the songs directory.\nTerminating...")
+            }
+            return Err(Error::DatabaseDirectoryCannotBeRead);
+        }
+    };
+
+    or_return!(
+        database.update_from_csv(
+            csv::CsvObject::from_str(
+                or_return!(
+                    str::from_utf8(
+                        or_return!(
+                            std::fs::read(&database_file_name).ok(),
+                            Ok(())
+                        ).as_slice()
+                    ).ok(),
+                    Err(Error::InvalidDatabaseFile)),
+                csv::DEFAULT_SEPARATOR,
+                csv::DEFAULT_STR_MARKER
+            )
+        ).ok(),
+        Err(Error::InvalidDatabaseFile)
+    );
+
+    database.enable_all();
+
+    Ok(())
+}
+
+pub fn disable_all<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
+    database_path: P,
+    database_filter: F,
+) -> Result<(), Error> {
+    logln!("Enabling all songs...");
+
+    let database_path = database_path.as_ref();
+    let database_file_name = database_path.join(DATABASE_FILE_NAME);
+
+    let _ = std::fs::create_dir(SONG_FILES_DIR);
+
+    let mut database = match database::SongDatabase::from_directory_filtered(database_path, database_filter) {
+        Ok(database) => database,
+        Err(e) => {
+            match e {
+                Error::DirectoryCannotBeRead => {
+                    eprintln!("The directory of the songs cannot be read.\nTerminating...");
+                }
+                _ => eprintln!("Unexpected error while trying to read the songs directory.\nTerminating...")
+            }
+            return Err(Error::DatabaseDirectoryCannotBeRead);
+        }
+    };
+
+    or_return!(
+        database.update_from_csv(
+            csv::CsvObject::from_str(
+                or_return!(
+                    str::from_utf8(
+                        or_return!(
+                            std::fs::read(&database_file_name).ok(),
+                            Ok(())
+                        ).as_slice()
+                    ).ok(),
+                    Err(Error::InvalidDatabaseFile)),
+                csv::DEFAULT_SEPARATOR,
+                csv::DEFAULT_STR_MARKER
+            )
+        ).ok(),
+        Err(Error::InvalidDatabaseFile)
+    );
+
+    database.disable_all();
+
+    Ok(())
+}
+
+pub fn reset_played<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
+    database_path: P,
+    database_filter: F,
+) -> Result<(), Error> {
+    logln!("Enabling all songs...");
+
+    let database_path = database_path.as_ref();
+    let database_file_name = database_path.join(DATABASE_FILE_NAME);
+
+    let _ = std::fs::create_dir(SONG_FILES_DIR);
+
+    let mut database = match database::SongDatabase::from_directory_filtered(database_path, database_filter) {
+        Ok(database) => database,
+        Err(e) => {
+            match e {
+                Error::DirectoryCannotBeRead => {
+                    eprintln!("The directory of the songs cannot be read.\nTerminating...");
+                }
+                _ => eprintln!("Unexpected error while trying to read the songs directory.\nTerminating...")
+            }
+            return Err(Error::DatabaseDirectoryCannotBeRead);
+        }
+    };
+
+    or_return!(
+        database.update_from_csv(
+            csv::CsvObject::from_str(
+                or_return!(
+                    str::from_utf8(
+                        or_return!(
+                            std::fs::read(&database_file_name).ok(),
+                            Ok(())
+                        ).as_slice()
+                    ).ok(),
+                    Err(Error::InvalidDatabaseFile)),
+                csv::DEFAULT_SEPARATOR,
+                csv::DEFAULT_STR_MARKER
+            )
+        ).ok(),
+        Err(Error::InvalidDatabaseFile)
+    );
+
+    database.reset_played();
+
+    Ok(())
+}
+
 /*
 #[cfg(test)]
 mod tests {

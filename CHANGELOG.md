@@ -1,9 +1,16 @@
 # Changelog
+## 0.5.3
+- Reworked the randomization code, it should now function as intended
+- Added mutually exclusive command line switches:
+  - `-E`: Enables all songs and exits
+  - `-D`: Disables all songs and exits
+  - `-R`: Resets the played status of all songs and exits
+- Some minor changes
 ## 0.5.2
 - Fixed a bug, where songs containing commas in their filenames
-had caused a startup crash, and `NaN` was displayed on the web UI.
+  had caused a startup crash, and `NaN` was displayed on the web UI.
 - Made the program display the generated file's directory if it is
-started with the `DEBUG` environment variable set to `true`
+  started with the `DEBUG` environment variable set to `true`
 - Modified default breaks to play music in to include the 1st break.
 ## 0.5.1
 - Added `gzip` encoding

@@ -1,4 +1,3 @@
-use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs::read_dir;
 use std::path::Path;
@@ -24,7 +23,7 @@ pub enum Error {
 
 pub struct SongDatabase {
     root_dir: Box<Path>,
-    songs: HashSet<Song>
+    songs: Vec<Song>
 }
 
 impl SongDatabase {
@@ -61,7 +60,7 @@ impl SongDatabase {
         )
     }
 
-    pub fn from_vec<P: AsRef<Path>>(entries: HashSet<Song>, root_dir: P) -> Result<Self, Error>
+    pub fn from_vec<P: AsRef<Path>>(entries: Vec<Song>, root_dir: P) -> Result<Self, Error>
     where Box<Path>: From<P>
     {
         Ok(Self { songs: entries, root_dir: or_return!(root_dir.as_ref().canonicalize().ok(), Err(Error::PathCannotBeCanonicalized)).into() })
@@ -80,12 +79,12 @@ impl SongDatabase {
     }
 
     #[inline]
-    pub fn inner(&self) -> &HashSet<Song> {
+    pub fn inner(&self) -> &Vec<Song> {
         &self.songs
     }
 
     #[inline]
-    pub fn inner_mut(&mut self) -> &mut HashSet<Song> {
+    pub fn inner_mut(&mut self) -> &mut Vec<Song> {
         &mut self.songs
     }
 
@@ -139,7 +138,12 @@ impl SongDatabase {
 
             song.set_played(or_return!(was_played.as_bool(), Err(Error::InvalidCSV)));
 
-            self.songs.replace(song);
+            for s in self.songs.iter_mut() { // HashMap::replace
+                if *s == song {
+                    *s = song;
+                    break
+                }
+            }
 
             added += 1;
         }
@@ -148,16 +152,24 @@ impl SongDatabase {
     }
 
     pub fn reset_played(&mut self) {
-        let songs = self
+        self
             .songs
-            .iter()
-            .map(|song| {
-                let mut s = song.clone();
-                s.set_played(false);
-                s
-            })
-            .collect::<HashSet<_>>();
-        self.songs = songs;
+            .iter_mut()
+            .for_each(|song| song.set_played(false));
+    }
+
+    pub fn enable_all(&mut self) {
+        self
+            .songs
+            .iter_mut()
+            .for_each(|song| song.set_enabled(true));
+    }
+
+    pub fn disable_all(&mut self) {
+        self
+            .songs
+            .iter_mut()
+            .for_each(|song| song.set_enabled(false));
     }
 }
 
@@ -191,13 +203,21 @@ impl DatabaseTransaction {
                     );
                 }
 
+                let new_song = or_return!(
+                    Song::new(new_path.as_ref()),
+                    Err((self, EntryCreationFailed))
+                );
+
                 return_unless!(
-                    database.songs.insert(or_return!(
+                    /*database.songs.insert(or_return!(
                         Song::new(new_path.as_ref()),
                         Err((self, EntryCreationFailed))
-                    )),
+                    )),*/
+                    database.songs.iter().find(|&x| *x == new_song).is_some(),
                     Err((self, EntryAlreadyExists))
                 );
+
+                database.songs.push(new_song);
             }
             EntryRemoved { file_name } => {
                 let file_path = database.root_dir.join(file_name.as_ref());
@@ -212,8 +232,13 @@ impl DatabaseTransaction {
                     }
                 }
 
-                database.songs.remove(&or_return!(
-                    Song::new(file_path.as_ref()),
+                let mut found_at = None;
+                for (idx, song) in database.songs.iter().enumerate() {
+                    if song.filename() == file_path { found_at = Some(idx); }
+                }
+
+                database.songs.swap_remove(or_return!(
+                    found_at,
                     Err((self, EntryCreationFailed))
                 ));
             }

@@ -18,6 +18,7 @@ fn has_allowed_extension(s: &songs::Song) -> bool {
 
 fn main() {
     let debug_mode = std::env::var("DEBUG").as_deref().unwrap_or("false") == "true";
+    let args = std::env::args().skip(1).collect::<Vec<_>>();
 
     let host_address = if let Some(port) = std::env::args().skip(1).next() {
         port
@@ -27,8 +28,25 @@ fn main() {
 
     if debug_mode { println!("Generated directory: {}", generated::GENERATED_DIRECTORY); }
 
-    match musiq::main(host_address, musiq::SONG_FILES_DIR, has_allowed_extension, musiq::CONFIG_FILE_PATH) {
-        Ok(_) => unreachable!(),
-        Err(err) => if debug_mode { println!("Program exited with error {err}"); }
+    if args.contains(&"-E".to_string()) { // Enable all songs
+        match musiq::enable_all(musiq::SONG_FILES_DIR, has_allowed_extension) {
+            Ok(_) => {},
+            Err(err) => if debug_mode { println!("Program exited with error {err}"); }
+        }
+    } else if args.contains(&"-D".to_string()) { // Disable all songs
+        match musiq::disable_all(musiq::SONG_FILES_DIR, has_allowed_extension) {
+            Ok(_) => {},
+            Err(err) => if debug_mode { println!("Program exited with error {err}"); }
+        }
+    } else if args.contains(&"-R".to_string()) { // Reset played status of all songs
+        match musiq::disable_all(musiq::SONG_FILES_DIR, has_allowed_extension) {
+            Ok(_) => {},
+            Err(err) => if debug_mode { println!("Program exited with error {err}"); }
+        }
+    } else {
+        match musiq::main(host_address, musiq::SONG_FILES_DIR, has_allowed_extension, musiq::CONFIG_FILE_PATH) {
+            Ok(_) => unreachable!(),
+            Err(err) => if debug_mode { println!("Program exited with error {err}"); }
+        }
     }
 }
