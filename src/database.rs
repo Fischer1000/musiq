@@ -4,23 +4,14 @@ use std::path::Path;
 
 use crate::songs::Song;
 use crate::csv::CsvObject;
-use crate::{or_continue, or_return, return_unless};
+use crate::{csv, or_continue, or_return, return_unless, DATABASE_FILE_NAME};
 use crate::Error;
 
-/*
-#[derive(Debug)]
-pub enum Error {
-    DirectoryCannotBeRead,
-    CannotCopyNewFile,
-    InvalidNewFileName,
-    EntryCreationFailed,
-    EntryAlreadyExists,
-    PathCannotBeCanonicalized,
-    FileCannotBeDeleted,
-    InvalidCSV
-}
-*/
-
+/// A database of songs.\
+/// This enables reading a directory of songs, filtering them,
+/// then playing them in a playlist, that tracks whether a song
+/// was played before or not.\
+/// If this gets out of scope, it saves the current state
 pub struct SongDatabase {
     root_dir: Box<Path>,
     songs: Vec<Song>
@@ -151,6 +142,7 @@ impl SongDatabase {
         Ok(added)
     }
 
+    /// Resets all songs' played state to 'not played'
     pub fn reset_played(&mut self) {
         self
             .songs
@@ -158,6 +150,7 @@ impl SongDatabase {
             .for_each(|song| song.set_played(false));
     }
 
+    /// Enables all songs, so they can be played
     pub fn enable_all(&mut self) {
         self
             .songs
@@ -165,11 +158,36 @@ impl SongDatabase {
             .for_each(|song| song.set_enabled(true));
     }
 
+    /// Disables all songs, so they cannot be played
     pub fn disable_all(&mut self) {
         self
             .songs
             .iter_mut()
             .for_each(|song| song.set_enabled(false));
+    }
+
+    /// Saves this database to the songs' directory in a file,
+    /// the name of which is hardcoded in `DATABASE_FILE_NAME`
+    pub fn save_to_file(&self) -> Result<(), std::io::Error> {
+        let database_file_name = self.root_dir.join(DATABASE_FILE_NAME);
+
+        std::fs::write(
+            &database_file_name,
+            CsvObject::serialize(
+                self.get_songs_csv(),
+                csv::DEFAULT_SEPARATOR,
+                csv::DEFAULT_STR_MARKER
+            )
+        )
+    }
+}
+
+impl Drop for SongDatabase {
+    fn drop(&mut self) {
+        /*if let Some(err) = self.save_to_file().err() {
+            println!("Error while dropping song database: {}", err);
+        }*/
+        let _ = self.save_to_file();
     }
 }
 

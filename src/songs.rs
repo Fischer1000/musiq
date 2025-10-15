@@ -138,6 +138,10 @@ impl std::cmp::PartialEq for Song {
 
 /// Composes a playlist with the given number of elements from a database's songs.
 pub fn compose_playlist(elem_cnt: usize, database: &mut SongDatabase) -> Option<Vec<Song>> {
+    if database.inner().len() == 0 {
+        return None;
+    }
+
     let mut elems: Vec<_> = database
         .inner_mut()
         .iter_mut()
@@ -145,14 +149,8 @@ pub fn compose_playlist(elem_cnt: usize, database: &mut SongDatabase) -> Option<
         .collect();
 
     if elem_cnt > elems.len() {
-        /*
         database.reset_played();
-        let elems = or_return!(compose_playlist(elem_cnt, database), None);
-        if elems.is_empty() { // If resetting solved it, no need to return None
-            None // Prevent an infinite loop
-        }
-        */
-        return None;
+        return compose_playlist(elem_cnt, database);
     }
 
     elems.shuffle(&mut rng());

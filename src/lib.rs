@@ -27,6 +27,8 @@ pub mod generated { include!(concat!(env!("OUT_DIR"), "/generated.rs")); }
 
 pub use crate::error::Error;
 
+/// The package version from `Cargo.toml`
+pub static VERSION: &str = env!("CARGO_PKG_VERSION");
 pub static SONG_FILES_DIR: &str = "./songs/";
 pub static CONFIG_FILE_PATH: &str = "./config.musiq";
 pub static DATABASE_FILE_NAME: &str = "db.csv";
@@ -41,7 +43,7 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
     database_filter: F,
     config_file_path: P
 ) -> Result<Infallible, Error> {
-    logln!("Started");
+    logln!("Started in version: {}", VERSION);
 
     let listener = TcpListener::bind(&addr).map_err(|_| Error::CannotBind)?;
     listener.set_nonblocking(true).map_err(|_| Error::CannotSetNonblocking)?;
@@ -119,15 +121,8 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> 
             let _ = stream.write_all(response.as_bytes().as_slice());
 
             let _ = configs.save_to_file(&config_file_path);
-
-            let _ = std::fs::write(
-                &database_file_name,
-                csv::CsvObject::serialize(
-                    database.get_songs_csv(),
-                    csv::DEFAULT_SEPARATOR,
-                    csv::DEFAULT_STR_MARKER
-                )
-            );
+            
+            let _ = database.save_to_file();
         }
 
         let now = Time::now(configs.utc_offset());
@@ -199,15 +194,6 @@ pub fn enable_all<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
 
     database.enable_all();
 
-    let _ = std::fs::write(
-        &database_file_name,
-        csv::CsvObject::serialize(
-            database.get_songs_csv(),
-            csv::DEFAULT_SEPARATOR,
-            csv::DEFAULT_STR_MARKER
-        )
-    );
-
     Ok(())
 }
 
@@ -255,15 +241,6 @@ pub fn disable_all<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
 
     database.disable_all();
 
-    let _ = std::fs::write(
-        &database_file_name,
-        csv::CsvObject::serialize(
-            database.get_songs_csv(),
-            csv::DEFAULT_SEPARATOR,
-            csv::DEFAULT_STR_MARKER
-        )
-    );
-
     Ok(())
 }
 
@@ -310,15 +287,6 @@ pub fn reset_played<P: AsRef<Path> + Clone, F: FnMut(&songs::Song) -> bool>(
     );
 
     database.reset_played();
-
-    let _ = std::fs::write(
-        &database_file_name,
-        csv::CsvObject::serialize(
-            database.get_songs_csv(),
-            csv::DEFAULT_SEPARATOR,
-            csv::DEFAULT_STR_MARKER
-        )
-    );
 
     Ok(())
 }

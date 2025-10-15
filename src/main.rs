@@ -2,6 +2,7 @@ use musiq::{songs, generated};
 
 use musiq::or_return;
 
+/// The supported file extensions by the song playing function
 static SUPPORTED_EXTENSIONS: &[&str] = &["mp3"];
 
 fn has_allowed_extension(s: &songs::Song) -> bool {

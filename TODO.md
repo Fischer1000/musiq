@@ -1,7 +1,8 @@
 # Things to be done
 - Adding nameday announcements
 - Making the webpage use HTTPS
-- A "select all" option in the web UI
+- A "select all" option in the web UI _(made obsolete
+  by command line switches added in version 0.5.3)_
 - Adding the ability to add other scheduled events
 - Send the server's current time to the web UI
 - Have a translation of the web UI
@@ -18,5 +19,7 @@
 - Make command line switches combinable (eg. `-E -R` => `-ER`)
 - Adding a file similar to `ENVVARS.md` with the purpose
   of tracking command line arguments
+- Add a config for hosting _(address, port)_,
+  and remove the mandatory command line argument
 # Bugs to be fixed
 - ~~Song randomization seems off~~

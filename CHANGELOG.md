@@ -6,6 +6,8 @@
   - `-D`: Disables all songs and exits
   - `-R`: Resets the played status of all songs and exits
 - Some minor changes
+- Made the song database automatically save on drop
+- Made so that if all songs were played, the played state is reset.
 ## 0.5.2
 - Fixed a bug, where songs containing commas in their filenames
   had caused a startup crash, and `NaN` was displayed on the web UI.
