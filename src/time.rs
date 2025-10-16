@@ -77,11 +77,15 @@ impl Time {
     pub const fn elapsed_seconds(&self) -> u32 {
         self.data % Self::SECS_PER_DAY
     }
+
+    pub fn display(&self) -> String {
+        format!("{:02}:{:02}:{:02}", self.hours(), self.minutes(), self.seconds())
+    }
 }
 
 impl std::fmt::Display for Time {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:02}:{:02}:{:02}", self.hours(), self.minutes(), self.seconds())
+        write!(f, "{}", self.display())
     }
 }
 

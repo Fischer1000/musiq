@@ -11,9 +11,14 @@ body {
     border-radius: 1vw;
     padding: 1vh;
     width: max-content;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 1vh auto;
     height: 5vh;
+}
+
+.server-time {
+    margin: 0 auto;
+    text-align: center;
+    font-family: "Cascadia Mono", monospace;
 }
 
 .section-head {

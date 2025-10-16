@@ -8,6 +8,7 @@ const playSongs = document.getElementById('play-selected');
 const timetableForm = document.getElementById('timetable');
 const addSongForm = document.getElementById('add-song-form');
 const utcOffset = document.getElementById("utc-offset");
+const timeDisplay = document.getElementById("server-time");
 
 // Songs to be disabled or deleted
 const selectedSongs = [];
@@ -19,6 +20,18 @@ const noRefresh = params.has('norefresh');
 
 const defaultSeparator = ',';
 const defaultStrMarker = '"';
+
+// Fetches a url as and returns its text response
+async function fetchText(url) {
+    // Bounds checking omitted, I know what I'm doing
+
+    const response = await fetch(url);
+    if (!response.ok) {
+        throw new Error(`Fetch failed with status ${response.status}: ${response.statusText}`);
+    }
+
+    return await response.text();
+}
 
 // Song upload
 songInput.addEventListener('change', function () {
@@ -139,9 +152,12 @@ playSongs.addEventListener('click', function (e) {
     if (!noRefresh) { location.reload(); }
 });
 
+// Submit timetable
 timetableForm.addEventListener("submit", e => {
     customSubmit(e, () => { if (!noRefresh) { location.reload(); } })
 });
+
+// Submit songs
 addSongForm.addEventListener("submit", e => {
     songUpload.disabled = true;
     songUpload.value = "Uploading...";
@@ -241,6 +257,7 @@ function customSubmit(event, callback = () => {}) {
         });
 }
 
+// Submits multiple files
 function submitMultipleFiles(event, callback = () => {}) {
     event.preventDefault();
 
@@ -288,7 +305,7 @@ function splitWithMarker(input, sep, str_mkr) {
     return result;
 }
 
-// Parse a css line to JS values
+// Parses a CSS line to JS values
 function csvToValue(csvLine, sep, str_mkr) {
     if (csvLine.length === 0) {
         return [];
@@ -316,6 +333,7 @@ function csvToValue(csvLine, sep, str_mkr) {
     return result;
 }
 
+// Parses an array of JS values into CSV line
 function arrayToCsv(arr) {
     let result = [];
 
@@ -334,95 +352,110 @@ function arrayToCsv(arr) {
     return result.join(',');
 }
 
-// Fetch the timetable
-fetch("data/timetable.csv")
-    .then(res => {
-        if (!res.ok) {
-            throw new Error("HTTP Error" + res.status);
-        }
-        return res.text();
-    })
-    .then(csvText => {
-        // Simple CSV parsing (splitting by newlines and commas)
-        const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
-        const days = ["mon", "tue", "wed", "thu", "fri"];
+async function main() {
+    // Query server time
+    let serverTime = Number(await fetchText("/data/server-time-seconds"));
 
-        for (let i = 0; i < 5; i++) {
-            for (let j = 0; j < 8; j++) {
-                document.getElementById(days[i] + j).checked = csvRows[j][i];
+    setInterval(() => {
+        serverTime++;
+        const h = String(Math.floor(serverTime / 3600)).padStart(2, '0');
+        const m = String(Math.floor((serverTime % 3600) / 60)).padStart(2, '0');
+        const s = String(serverTime % 60).padStart(2, '0');
+        timeDisplay.innerHTML = `${h}:${m}:${s}`
+    }, 1000);
+
+    // Fetch the timetable
+    fetch("data/timetable.csv")
+        .then(res => {
+            if (!res.ok) {
+                throw new Error("HTTP Error" + res.status);
             }
-        }
-    })
-    .catch(err => console.error("Fetch error:", err));
+            return res.text();
+        })
+        .then(csvText => {
+            // Simple CSV parsing (splitting by newlines and commas)
+            const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
+            const days = ["mon", "tue", "wed", "thu", "fri"];
 
-// Fetch the breaks
-fetch("data/breaks.csv")
-    .then(res => {
-        if (!res.ok) {
-            throw new Error("HTTP Error" + res.status);
-        }
-        return res.text();
-    })
-    .then(csvText => {
-        // Simple CSV parsing (splitting by newlines and commas)
-        const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
-
-        for (let i = 0; i < 8; i++) {
-            document.getElementById("break-start" + i).value = csvRows[i][0]
-            document.getElementById("break-end" + i).value = csvRows[i][1]
-        }
-    })
-    .catch(err => console.error("Fetch error:", err));
-
-// Fetch UTC offset
-fetch("data/utc-offset.bin")
-    .then(res => {
-        if (!res.ok) {
-            throw new Error("HTTP Error" + res.status);
-        }
-        return res.arrayBuffer();
-    })
-    .then(buf => {
-        const int8View = new Int8Array(buf);
-
-        const num = int8View[0];
-
-        if (buf.byteLength !== 1 || num < -24 || num > 24 ) {
-            throw new Error("Invalid response")
-        }
-
-        utcOffset.value = num
-    })
-    .catch(err => console.error("Fetch error:", err));
-
-// Fetch the song list
-fetch("data/songs.csv")
-    .then(res => {
-        if (!res.ok) {
-            throw new Error("HTTP Error" + res.status);
-        }
-        return res.text();
-    })
-    .then(csvText => {
-        const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
-
-        for (const csvRow of csvRows) {
-            if (csvRow.length === 0) {
-                continue;
+            for (let i = 0; i < 5; i++) {
+                for (let j = 0; j < 8; j++) {
+                    document.getElementById(days[i] + j).checked = csvRows[j][i];
+                }
             }
-            let row = songListTable.insertRow(-1);
-            row.className = "song-list-row";
-            row.id = "song-" + csvRow[0];
+        })
+        .catch(err => console.error("Fetch error:", err));
 
-            const filenameCell = row.insertCell(0);
-            filenameCell.innerHTML = csvRow[0];
-            filenameCell.className = "filename-field";
-
-            if (csvRow[1]) {
-                row.insertCell(1).innerHTML = "✔";
-            } else {
-                row.insertCell(1).innerHTML = "✘";
+    // Fetch the breaks
+    fetch("data/breaks.csv")
+        .then(res => {
+            if (!res.ok) {
+                throw new Error("HTTP Error" + res.status);
             }
-        }
-    })
-    .catch(err => console.error("Fetch error:", err));
+            return res.text();
+        })
+        .then(csvText => {
+            // Simple CSV parsing (splitting by newlines and commas)
+            const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
+
+            for (let i = 0; i < 8; i++) {
+                document.getElementById("break-start" + i).value = csvRows[i][0]
+                document.getElementById("break-end" + i).value = csvRows[i][1]
+            }
+        })
+        .catch(err => console.error("Fetch error:", err));
+
+    // Fetch UTC offset
+    fetch("data/utc-offset.bin")
+        .then(res => {
+            if (!res.ok) {
+                throw new Error("HTTP Error" + res.status);
+            }
+            return res.arrayBuffer();
+        })
+        .then(buf => {
+            const int8View = new Int8Array(buf);
+
+            const num = int8View[0];
+
+            if (buf.byteLength !== 1 || num < -24 || num > 24) {
+                throw new Error("Invalid response")
+            }
+
+            utcOffset.value = num
+        })
+        .catch(err => console.error("Fetch error:", err));
+
+    // Fetch the song list
+    fetch("data/songs.csv")
+        .then(res => {
+            if (!res.ok) {
+                throw new Error("HTTP Error" + res.status);
+            }
+            return res.text();
+        })
+        .then(csvText => {
+            const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
+
+            for (const csvRow of csvRows) {
+                if (csvRow.length === 0) {
+                    continue;
+                }
+                let row = songListTable.insertRow(-1);
+                row.className = "song-list-row";
+                row.id = "song-" + csvRow[0];
+
+                const filenameCell = row.insertCell(0);
+                filenameCell.innerHTML = csvRow[0];
+                filenameCell.className = "filename-field";
+
+                if (csvRow[1]) {
+                    row.insertCell(1).innerHTML = "✔";
+                } else {
+                    row.insertCell(1).innerHTML = "✘";
+                }
+            }
+        })
+        .catch(err => console.error("Fetch error:", err));
+}
+
+main();

@@ -21,5 +21,6 @@
   of tracking command line arguments
 - Add a config for hosting _(address, port)_,
   and remove the mandatory command line argument
+- Make the program automatically change timezones
 # Bugs to be fixed
 - ~~Song randomization seems off~~

@@ -409,6 +409,20 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                 ).into_bytes()
             }),
             // "/data/server-time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
+            "/data/server-time" => {
+                let body = time::Time::now(configs.utc_offset()).display().as_bytes().to_vec();
+                return Response::new(200, "OK", vec![
+                    "Content-Type: text/plain".into(),
+                    format!("Content-Length: {}", body.len()),
+                ], body).unwrap()
+            },
+            "/data/server-time-seconds" => {
+                let body = time::Time::now(configs.utc_offset()).elapsed_seconds().to_string().as_bytes().to_vec();
+                return Response::new(200, "OK", vec![
+                    "Content-Type: text/plain".into(),
+                    format!("Content-Length: {}", body.len()),
+                ], body).unwrap()
+            },
             _ => return Response::not_found(),
         }.to_vec()
     };

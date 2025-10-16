@@ -8,6 +8,7 @@
 - Some minor changes
 - Made the song database automatically save on drop
 - Made so that if all songs were played, the played state is reset.
+- Added a server time display to the web UI
 ## 0.5.2
 - Fixed a bug, where songs containing commas in their filenames
   had caused a startup crash, and `NaN` was displayed on the web UI.
