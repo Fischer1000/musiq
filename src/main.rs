@@ -18,6 +18,10 @@ fn has_allowed_extension(s: &songs::Song) -> bool {
 }
 
 fn main() {
+    // println!("{}", events::Event::new("Test".to_string().into_boxed_str()).trigger());
+
+    // return;
+
     let debug_mode = std::env::var("DEBUG").as_deref().unwrap_or("false") == "true";
     let args = std::env::args().skip(1).collect::<Vec<_>>();
 
@@ -44,8 +48,14 @@ fn main() {
             Ok(_) => {},
             Err(err) => if debug_mode { println!("Program exited with error {err}"); }
         }
-    } else {
-        match musiq::main(host_address, musiq::SONG_FILES_DIR, has_allowed_extension, musiq::CONFIG_FILE_PATH) {
+    } else { // Standard function
+        match musiq::main(
+            host_address,
+            musiq::SONG_FILES_DIR,
+            has_allowed_extension,
+            musiq::CONFIG_FILE_PATH,
+            musiq::EVENT_FILES_DIR
+        ) {
             Ok(_) => unreachable!(),
             Err(err) => if debug_mode { println!("Program exited with error {err}"); }
         }

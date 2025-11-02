@@ -4,6 +4,14 @@ body {
     color: #2d3142;
 }
 
+input {
+    font-family: "Cascadia Mono", monospace;
+}
+
+*:disabled {
+    cursor: not-allowed;
+}
+
 .title {
     text-align: center;
     font-weight: bold;
@@ -67,9 +75,18 @@ table.song-list {
     margin: 0;
 }
 
-table.scheduled-list {
-    width: 30vw;
+table.event-list {
+    width: 33vw;
     margin: 0;
+}
+
+.break-timer {
+    width: fit-content;
+    height: fit-content;
+    padding: 0.5vh;
+    border-radius: 0.5vh;
+    border-style: none;
+    background-color: #bfc0c0;
 }
 
 #song-list-table-div {
@@ -81,7 +98,7 @@ table.scheduled-list {
     margin-bottom: 0.5vh;
 }
 
-#scheduled-list-table-div {
+#event-list-table-div {
     width: max-content;
     overflow-y: scroll;
     height: 50vh;
@@ -94,15 +111,19 @@ table.fixed {
     table-layout: fixed;
 }
 
-tr.song-list-row:hover {
+tr.song-list-row:hover, tr.event-list-row:hover {
     background-color: #bfc0c0;
     cursor: pointer;
 }
 
-tr.song-list-row.active {
+tr.song-list-row.active, tr.event-list-row.active {
     background-color: #9fa0a0;
     color: #ffffff;
     cursor: pointer;
+}
+
+td.time-field {
+    font-family: "Cascadia Mono", monospace;
 }
 
 th, td {
@@ -123,16 +144,13 @@ th {
     border-bottom-width: 0;
 }
 
-.filename-field {
+.filename-field, .name-field {
     text-align: right;
 }
 
-.utc-offset {
+.number-holder, .switch-holder, .datetime-holder {
     margin-top: auto;
     margin-bottom: auto;
-}
-
-#utc-offset-holder {
     width: max-content;
     height: max-content;
     padding: 1vh;
@@ -140,13 +158,19 @@ th {
     background-color: #4f5d75;
 }
 
-#utc-offset-label {
-    font-weight: bold;
+.switch-holder p.switch-label-holder {
+    margin-top: auto;
+    margin-bottom: auto;
 }
 
-#utc-offset {
+.number-holder-label, .switch-holder p.switch-label-holder, .datetime-holder-label {
+    font-weight: bold;
+    display: inline;
+    vertical-align: middle;
+}
+
+.number-holder-input, .datetime-holder-input {
     margin-left: 0.5vw;
-    width: 30px;
     height: max-content;
     background-color: #bfc0c0;
     border-style: none;
@@ -155,9 +179,13 @@ th {
     color: #2d3142;
 }
 
-#utc-offset:hover {
+.number-holder-input:disabled, .datetime-holder-input:disabled, .number-holder-input:hover, .datetime-holder-input:hover {
     background-color: #9fa0a0;
     color: #ffffff;
+}
+
+#utc-offset-number {
+    width: calc(2ch + 1vw);
 }
 
 #add-song-form {
@@ -205,11 +233,21 @@ input.submit, label.button, button {
     min-width: 9vw;
 }
 
-#songs-label {
+.text-input {
+    background-color: #ffffff;
+    text-align: left;
+    padding: 1vh;
+    border-radius: 1vh;
+    height: 1em;
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+#songs-label, #event-sound-label {
     min-width: calc(9vw - 2vh);
 }
 
-.dangerous {
+.dangerous, input.submit.dangerous {
     background-color: #ef8354;
     color: #ffffff;
 }
@@ -220,7 +258,7 @@ input.submit:hover, label.button:hover, button:hover {
     cursor: pointer;
 }
 
-.dangerous:hover {
+.dangerous:hover, input.submit.dangerous:hover {
     background-color: #bfc0c0;
     color: #2d3142;
 }
@@ -230,7 +268,7 @@ input.submit:active, label.button:active, button:active {
     color: #ffffff;
 }
 
-.dangerous:active {
+.dangerous:active, input.submit.dangerous:active {
     background-color: #9fa0a0;
     color: #2d3142;
 }
@@ -239,4 +277,73 @@ input.submit:disabled, label.button:disabled, button:disabled {
     background-color: #bfc0c0;
     color: #2d3142;
     cursor: not-allowed;
+}
+
+svg.switch {
+    transition-duration: 200ms;
+    transition-property: all;
+    width: 2em;
+    height: 1em;
+}
+
+svg.switch:hover {
+    cursor: pointer;
+}
+
+svg.switch circle {
+    cx: 0.5em;
+    cy: 0.5em;
+    r: 0.4em;
+    fill: #ffffff;
+}
+
+svg.switch rect {
+    width: 2em;
+    height: 1em;
+    fill: #9fa0a0;
+    rx: 0.5em;
+}
+
+svg.switched-on circle {
+    cx: 1.5em;
+}
+
+svg.switched-on rect {
+    fill: #ef8354;
+}
+
+#event-name {
+    width: 16ch;
+}
+
+#event-name, #event-trigger-time-holder, #event-repeat-amount-holder {
+    margin-right: auto;
+}
+
+#event-sound-label, #autodelete-switch-holder, #remove-event {
+    margin-right: auto;
+    margin-left: auto;
+}
+
+#scheduled-switch-holder, #event-repeat-time-holder, #add-event {
+    margin-left: auto;
+}
+
+#event-trigger-time {
+    width: calc(22ch + 2vh);
+}
+
+#event-repeat-time, #event-repeat-amount {
+    width: 5ch;
+}
+
+.no-arrows::-webkit-inner-spin-button,
+.no-arrows::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.no-picker::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
 }

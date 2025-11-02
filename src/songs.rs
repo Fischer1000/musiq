@@ -20,6 +20,43 @@ use crate::generated::TARGET_VOLUME;
 /// Block a thread while a song is playing with this Mutex
 pub static SONG_PLAYING_GATE: Mutex<()> = Mutex::new(());
 
+/// Plays an MP3 file
+/// # Usage
+/// `before_play` is called with `rms`, `scale_factor`, `duration_secs`
+pub fn play_mp3(
+    file_path: impl AsRef<Path>,
+    device: &Device,
+    before_play: impl Fn(f32, f32, f64)
+) -> Result<(), Error> {
+    let file = or_return!(std::fs::File::open(&file_path).ok(), Err(Error::CannotReadFile));
+    let mut decoder = Decoder::new(BufReader::new(file));
+    let mut samples = Vec::new();
+
+    let mut source_sample_rate = 44100;
+    let mut source_channels = 2;
+
+    while let Ok(Frame { data, sample_rate: sr, channels: ch, .. }) = decoder.next_frame() {
+        samples.extend(data.iter().map(|&s| {
+            s as f32 / i16::MAX as f32
+        }));
+        source_sample_rate = sr;
+        source_channels = ch;
+    }
+
+    let (rms, scale_factor) = normalize_samples(&mut samples, TARGET_VOLUME);
+
+    let duration_secs = samples.len() as f64 / (source_sample_rate as f64 * source_channels as f64);
+
+    // logln!("Playing \"{}\" ({:.1} seconds, RMS = {rms}, α={scale_factor})", self.filename.display(), duration_secs);
+    before_play(rms, scale_factor, duration_secs);
+
+    play_samples(samples.into_boxed_slice(), source_sample_rate as u32, source_channels as u16, device)?;
+
+    // logln!("Finished");
+
+    Ok(())
+}
+
 #[derive(Debug, Eq, Clone)]
 pub struct Song {
     filename: Box<OsStr>,
@@ -89,30 +126,18 @@ impl Song {
     pub fn play(&self, device: &Device) -> Result<(), Error> {
         let file_path = Path::new(crate::SONG_FILES_DIR).join(self.filename.as_ref());
 
-        let file = or_return!(std::fs::File::open(&file_path).ok(), Err(Error::CannotReadFile));
-        let mut decoder = Decoder::new(BufReader::new(file));
-        let mut samples = Vec::new();
+        play_mp3(
+            file_path,
+            device,
+            |rms, scale_factor, duration_secs|
+                logln!(
+                    "Playing \"{}\" ({:.1} seconds, RMS = {rms}, α={scale_factor})",
+                    self.filename.display(),
+                    duration_secs
+                )
+        )?;
 
-        let mut source_sample_rate = 44100;
-        let mut source_channels = 2;
-
-        while let Ok(Frame { data, sample_rate: sr, channels: ch, .. }) = decoder.next_frame() {
-            samples.extend(data.iter().map(|&s| {
-                s as f32 / i16::MAX as f32
-            }));
-            source_sample_rate = sr;
-            source_channels = ch;
-        }
-
-        let (rms, scale_factor) = normalize_samples(&mut samples, TARGET_VOLUME);
-
-        let duration_secs = samples.len() as f64 / (source_sample_rate as f64 * source_channels as f64);
-
-        logln!("Playing \"{}\" ({:.1} seconds, RMS = {rms}, α={scale_factor})", self.filename.display(), duration_secs);
-
-        play_samples(samples.into_boxed_slice(), source_sample_rate as u32, source_channels as u16, device)?;
-
-        logln!("Finished");
+        println!("Finished");
 
         Ok(())
     }

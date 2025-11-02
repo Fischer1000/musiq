@@ -3,12 +3,14 @@ use std::ffi::OsStr;
 use std::net::{TcpListener, ToSocketAddrs, TcpStream};
 use std::io::{BufReader, Write, Read};
 use std::mem::MaybeUninit;
+use std::num::{NonZeroU16, NonZeroU64};
 use std::path::Path;
 
-use crate::{generated, logln, or_continue, or_return, songs, time};
+use crate::{generated, logln, or_continue, or_return, songs, time, events};
 use crate::config::Configs;
 use crate::csv::{CsvObject, DEFAULT_SEPARATOR, DEFAULT_STR_MARKER};
 use crate::Error;
+use crate::events::{EventQueue, ScheduledTrigger};
 use crate::songs::Song;
 use crate::generated::{Encoding, ENCODING};
 
@@ -108,11 +110,10 @@ impl Request {
             let body = {
                 let mut error = false;
                 let body = buf_reader_bytes.take(content_length).map(|v| match v {
-                    Ok(v) => v,
-                    #[allow(invalid_value)] // Body is never read if at least one error has occurred
+                    Ok(v) => MaybeUninit::new(v),
                     Err(_) => {
                         error = true;
-                        unsafe { MaybeUninit::uninit().assume_init() }
+                        MaybeUninit::uninit()
                     }
                 }).collect::<Vec<_>>();
 
@@ -120,7 +121,14 @@ impl Request {
                     return Err(Error::RequestReadFailed);
                 }
 
-                body
+                unsafe { // Transmute the vector only if it is proven to be initialized
+                    let boxed: Box<[MaybeUninit<u8>]> = body.into_boxed_slice();
+
+                    let raw = Box::into_raw(boxed) as *mut [u8];
+                    let boxed_t: Box<[u8]> = Box::from_raw(raw);
+
+                    boxed_t.into_vec()
+                }
             };
             body
         } else {
@@ -314,7 +322,12 @@ pub fn start_server<A: ToSocketAddrs, H: Fn(Result<Request, Error>, &mut Databas
 }
 
 #[must_use = "Requests must be replied to"]
-pub fn handle_request(request: Result<Request, Error>, database: &mut Database, configs: &mut Configs) -> Response {
+pub fn handle_request(
+    request: Result<Request, Error>,
+    database: &mut Database,
+    configs: &mut Configs,
+    event_queue: &mut EventQueue
+) -> Response {
     let request = match request {
         Ok(r) => r,
         Err(e) => return match e {
@@ -329,13 +342,19 @@ pub fn handle_request(request: Result<Request, Error>, database: &mut Database, 
     };
 
     match request {
-        Request::Get { uri, headers } => handle_get(uri, headers, database, configs),
-        Request::Post { uri, headers, body } => handle_post(uri, headers, body, database, configs),
+        Request::Get { uri, headers } => handle_get(uri, headers, database, configs, event_queue),
+        Request::Post { uri, headers, body } => handle_post(uri, headers, body, database, configs, event_queue),
         // _ => return Response::not_implemented()
     }
 }
 
-fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Configs) -> Response {
+fn handle_get(
+    uri: Uri,
+    _headers: Headers,
+    database: &Database,
+    configs: &Configs,
+    event_queue: &mut EventQueue
+) -> Response {
     let content_type: &'static str;
     let content_encoding: Option<&'static str>;
 
@@ -408,6 +427,16 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                     DEFAULT_STR_MARKER
                 ).into_bytes()
             }),
+            #[allow(unused_parens)]
+            "/data/events.csv" => break 'match_uri ({
+                content_type = "text/csv";
+                content_encoding = None;
+                CsvObject::serialize(
+                    event_queue.get_queue_csv(),
+                    DEFAULT_SEPARATOR,
+                    DEFAULT_STR_MARKER
+                ).into_bytes()
+            }),
             // "/data/server-time" => return Response::ok(format!("{}", time::Time::now(configs.utc_offset())).into_bytes()),
             "/data/server-time" => {
                 let body = time::Time::now(configs.utc_offset()).display().as_bytes().to_vec();
@@ -423,7 +452,7 @@ fn handle_get(uri: Uri, _headers: Headers, database: &Database, configs: &Config
                     format!("Content-Length: {}", body.len()),
                 ], body).unwrap()
             },
-            _ => return Response::not_found(),
+            _ => return Response::not_found()
         }.to_vec()
     };
 
@@ -463,11 +492,20 @@ macro_rules! first_line_from_utf8_csv_or_return {
     };
 }
 
-fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database, configs: &mut Configs) -> Response {
-    // println!("URI: {:?}\nHeaders:\n{}Body length: {}\n", uri, headers.join("\n"), body.len());
+macro_rules! or_bad_request {
+    ($e:expr) => {
+        or_return!($e, Response::bad_request())
+    };
+}
 
-    // println!("{:?}", String::from_utf8(body.clone()).or::<()>(Ok("".to_string())));
-
+fn handle_post(
+    uri: Uri,
+    _headers: Headers,
+    body: Body,
+    database: &mut Database,
+    configs: &mut Configs,
+    event_queue: &mut EventQueue
+) -> Response {
     match uri.without_query_parameters() {
         "/api/set-timetable" => {
             or_return!(configs.set_timetable_from_csv(
@@ -622,6 +660,87 @@ fn handle_post(uri: Uri, _headers: Headers, body: Body, database: &mut Database,
                     _ => Response::internal_server_error()
                 }
             }
+        },
+        "/api/add-event" => {
+            let [serialized, file_contents]: [&[u8]; 2] = or_return!(
+                body
+                    .splitn(2, |v| *v == b'\n')
+                    .collect::<Vec<&[u8]>>()
+                    .try_into()
+                    .ok(),
+                Response::bad_request()
+            );
+
+            let deserialized: Vec<String> = or_return!(
+                serialized
+                    .splitn(4, |v| *v == b'\0').map(|x| String::from_utf8(x.to_vec()))
+                    .collect::<Result<Vec<String>, _>>()
+                    .ok(),
+                Response::bad_request()
+            );
+
+            let (name, trigger) = match deserialized.len() {
+                1 => (deserialized[0].clone(), None),
+                4 => {
+                    let [name, trigger_time, repeat_time, repeat_amount_and_delete]: [String; 4] =
+                        deserialized.try_into().unwrap();
+
+                    let next_trigger = or_bad_request!(
+                        ScheduledTrigger::raw_next_trigger_from(&trigger_time)
+                    );
+
+                    let trigger_period = NonZeroU64::new(
+                        or_bad_request!(repeat_time.parse::<u64>().ok())
+                    );
+
+                    let (repeat_amount, auto_delete_s) = repeat_amount_and_delete
+                        .split_at(repeat_amount_and_delete.len() - 1);
+
+                    let triggers_remaining = NonZeroU16::new(
+                        or_bad_request!(repeat_amount.parse::<u16>().ok())
+                    );
+
+                    let auto_delete = match auto_delete_s {
+                        "T" => true,
+                        "F" => false,
+                        _ => return Response::bad_request()
+                    };
+
+                    (
+                        name,
+                        Some(events::ScheduledTrigger::new(
+                            next_trigger, trigger_period, triggers_remaining, auto_delete
+                        ))
+                    )
+                }
+                _ => return Response::bad_request()
+            };
+
+            event_queue.remove_by_name(&name); // TODO: replace this with a proper check
+            
+            let event = or_return!(
+                events::Event::new(trigger, name.into_boxed_str(), file_contents).ok(),
+                Response::internal_server_error()
+            );
+            
+            event_queue.insert_event(event);
+
+            Response::ok("Event successfully added".as_bytes().to_vec())
+        },
+        "/api/remove-events" => {
+            let decoded = CsvObject::from_str(
+                or_bad_request!(str::from_utf8(&body).ok()),
+                DEFAULT_SEPARATOR,
+                DEFAULT_STR_MARKER
+            );
+
+            for line in decoded {
+                let name = or_bad_request!(line.get(0).and_then(|x| x.as_string()));
+
+                event_queue.remove_by_name(name);
+            }
+
+            Response::ok("Event successfully removed".as_bytes().to_vec())
         },
         _ => Response::not_found(),
     }

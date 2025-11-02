@@ -1,17 +1,43 @@
 const songInput = document.getElementById('songs');
 const songUpload = document.getElementById('song-submit');
+
 const songListTable = document.getElementById('song-list-table');
+
 const disableSongs = document.getElementById('disable-selected');
 const enableSongs = document.getElementById('enable-selected');
 const deleteSongs = document.getElementById('delete-selected');
 const playSongs = document.getElementById('play-selected');
+
 const timetableForm = document.getElementById('timetable');
+
 const addSongForm = document.getElementById('add-song-form');
-const utcOffset = document.getElementById("utc-offset");
+
+const utcOffset = document.getElementById("utc-offset-number");
+
 const timeDisplay = document.getElementById("server-time");
+
+const eventListTable = document.getElementById('event-list-table');
+
+const addEventForm = document.getElementById('add-event-form');
+const eventName = document.getElementById("event-name");
+const eventSound = document.getElementById("event-sound");
+const scheduledSwitch = document.getElementById("scheduled-switch");
+const eventTriggerTime = document.getElementById("event-trigger-time");
+const eventRepeatTime = document.getElementById("event-repeat-time");
+const eventRepeatAmount = document.getElementById("event-repeat-amount");
+const eventAutodeleteSwitch = document.getElementById("event-autodelete-switch");
+const addEvent = document.getElementById("add-event");
 
 // Songs to be disabled or deleted
 const selectedSongs = [];
+
+// The event selected to be edited
+let selectedEvent = null; // Disgusting `null` -> `Option<String>`
+
+// Represents the state of the switch that select the event scheduling
+let addEventSchedulingSet = false;
+let eventAutoDeleteSet = false;
+let eventSchedulingElems = [eventTriggerTime, eventRepeatTime, eventRepeatAmount];
 
 // URL Parameters
 const params = new URLSearchParams(window.location.search);
@@ -20,6 +46,8 @@ const noRefresh = params.has('norefresh');
 
 const defaultSeparator = ',';
 const defaultStrMarker = '"';
+
+const eventCreationOptions = addEventForm.innerHTML;
 
 // Fetches a url as and returns its text response
 async function fetchText(url) {
@@ -55,12 +83,31 @@ songListTable.addEventListener('click', function (e) {
 
     let filename = row.id.slice(5);
 
-    let arrayIndex =selectedSongs.indexOf(filename);
+    let arrayIndex = selectedSongs.indexOf(filename);
 
     if (arrayIndex === -1) {
         selectedSongs.push(filename);
     } else {
         selectedSongs.splice(arrayIndex, 1);
+    }
+});
+
+// Select event from table
+eventListTable.addEventListener('click', function (e) {
+    let row = e.target.closest('tr');
+    row.classList.toggle('active');
+
+    let name = row.id.slice(6);
+
+    if (selectedEvent === name) {
+        selectedEvent = null
+
+        addEventForm.innerHTML = eventCreationOptions;
+    } else {
+        selectedEvent = name
+
+        addEventForm.innerHTML =
+            "<input type=\"submit\" class=\"submit dangerous\" value=\"Remove Event\" id=\"remove-event\">";
     }
 });
 
@@ -140,7 +187,7 @@ playSongs.addEventListener('click', function (e) {
         "/api/play-songs", {
             method: 'POST',
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/csv"
             },
             body: arrayToCsv(selectedSongs)
         });
@@ -154,7 +201,7 @@ playSongs.addEventListener('click', function (e) {
 
 // Submit timetable
 timetableForm.addEventListener("submit", e => {
-    customSubmit(e, () => { if (!noRefresh) { location.reload(); } })
+    timetableSubmit(e, () => { if (!noRefresh) { location.reload(); } })
 });
 
 // Submit songs
@@ -168,14 +215,94 @@ addSongForm.addEventListener("submit", e => {
     });
 });
 
-// Submits a form
-function customSubmit(event, callback = () => {}) {
+addEventForm.addEventListener("submit", e => {
+    if (selectedEvent === null) {
+        addEventSubmit(e, () => { if (!noRefresh) { location.reload(); } })
+    } else {
+        removeEventSubmit(e, () => { if (!noRefresh) { location.reload(); } })
+    }
+})
+
+// Make the schedule switch togglable
+scheduledSwitch.addEventListener('click', function (e) {
+    // Toggle switch state
+    if (addEventSchedulingSet) {
+        scheduledSwitch.classList.remove('switched-on');
+    } else {
+        scheduledSwitch.classList.add('switched-on');
+    }
+
+    // Toggle scheduling elements
+    for (const elem of eventSchedulingElems) {
+        elem.disabled = addEventSchedulingSet;
+    }
+
+    // Toggle global state
+    addEventSchedulingSet = !addEventSchedulingSet;
+
+    addEvent.disabled = !validateNewEvent()
+})
+
+eventAutodeleteSwitch.addEventListener('click', function (e) {
+    if (addEventSchedulingSet) {
+        // Toggle switch state
+        if (eventAutoDeleteSet) {
+            eventAutodeleteSwitch.classList.remove('switched-on');
+        } else {
+            eventAutodeleteSwitch.classList.add('switched-on');
+        }
+
+        // Toggle global state
+        eventAutoDeleteSet = !eventAutoDeleteSet;
+    }
+
+    addEvent.disabled = !validateNewEvent()
+})
+
+eventName.addEventListener('change', function (e) {
+    addEvent.disabled = !validateNewEvent()
+})
+
+eventSound.addEventListener('change', function (e) {
+    addEvent.disabled = !validateNewEvent()
+})
+
+eventTriggerTime.addEventListener('change', function (e) {
+    addEvent.disabled = !validateNewEvent()
+})
+
+eventRepeatTime.addEventListener('change', function (e) {
+    addEvent.disabled = !validateNewEvent()
+})
+
+eventRepeatAmount.addEventListener('change', function (e) {
+    addEvent.disabled = !validateNewEvent()
+})
+
+function validateNewEvent() {
+    const namelen = eventName.value.length;
+    const nEventRepeatTime = Number(eventRepeatTime.value)
+    const nEventRepeatAmount = Number(eventRepeatAmount.value)
+
+    return (
+        (namelen > 0 && namelen <= 16) && // Name is valid
+        eventSound.files.length === 1 && // There is a file selected
+        (!addEventSchedulingSet || ( // If the event has scheduling...
+            eventTriggerTime.value !== "" && // A trigger time is selected
+            (nEventRepeatTime >= 0 && nEventRepeatTime <= 18446744073709551615) && // Event repeat time is in-bounds
+            (nEventRepeatAmount >= 0 && nEventRepeatAmount <= 65535) // Event repeat amount is in-bounds
+        ))
+    );
+}
+
+// Submits the timetable form
+function timetableSubmit(event, callback = () => {}) {
     // Prevent default form submission
     event.preventDefault();
 
     const checkboxes = document.querySelectorAll("#timetable input[type=checkbox]");
     const times = document.querySelectorAll("#timetable input[type=time]");
-    const offset = document.getElementById("utc-offset");
+    const offset = document.getElementById("utc-offset-number");
 
     const checkboxLines = [];
     for (let row = 0; row < 8; row++) {
@@ -281,6 +408,57 @@ function submitMultipleFiles(event, callback = () => {}) {
             }
         });
     }
+}
+
+// Submits a new event
+function addEventSubmit(event, callback = () => {}) {
+    event.preventDefault();
+
+    // ## Serialize string data ##
+    let serializedUtf8 = eventName.value;
+    if (addEventSchedulingSet) {
+        serializedUtf8 += "\0";
+        serializedUtf8 += eventTriggerTime.value;
+        serializedUtf8 += "\0";
+        serializedUtf8 += eventRepeatTime.value;
+        serializedUtf8 += "\0";
+        serializedUtf8 += eventRepeatAmount.value;
+        if (eventAutoDeleteSet) {
+            serializedUtf8 += "T";
+        } else {
+            serializedUtf8 += "F";
+        }
+    }
+    serializedUtf8 += "\n";
+
+    // ## Creating payload ##
+    const prefix = new TextEncoder().encode(serializedUtf8);
+    const payload = new Blob([prefix, eventSound.files[0]], { type: "application/octet-stream" });
+
+    // ## Submitting ##
+    fetch("/api/add-event", {
+        method: 'POST',
+        headers: {
+            "Content-Type": "application/octet-stream"
+        },
+        body: payload
+    }).then(callback);
+}
+
+// Removes an event
+function removeEventSubmit(event, callback = () => {}) {
+    event.preventDefault();
+
+    const csv = arrayToCsv([selectedEvent]);
+
+    // ## Submitting ##
+    fetch("/api/remove-events", {
+        method: 'POST',
+        headers: {
+            "Content-Type": "application/csv"
+        },
+        body: csv
+    }).then(callback);
 }
 
 // Split a string at the given separator values, while skipping splitting inside the markers
@@ -448,11 +626,43 @@ async function main() {
                 filenameCell.innerHTML = csvRow[0];
                 filenameCell.className = "filename-field";
 
+                const enabledCell = row.insertCell(1);
                 if (csvRow[1]) {
-                    row.insertCell(1).innerHTML = "✔";
+                    enabledCell.innerHTML = "✔";
                 } else {
-                    row.insertCell(1).innerHTML = "✘";
+                    enabledCell.innerHTML = "✘";
                 }
+                enabledCell.className = "enabled-field";
+            }
+        })
+        .catch(err => console.error("Fetch error:", err));
+
+    // Fetch the event list
+    fetch("data/events.csv")
+        .then(res => {
+            if (!res.ok) {
+                throw new Error("HTTP Error" + res.status);
+            }
+            return res.text();
+        })
+        .then(csvText => {
+            const csvRows = csvText.trim().split("\r\n").map(line => csvToValue(line, defaultSeparator, defaultStrMarker));
+
+            for (const csvRow of csvRows) {
+                if (csvRow.length === 0) {
+                    continue;
+                }
+                let row = eventListTable.insertRow(-1);
+                row.className = "event-list-row";
+                row.id = "event-" + csvRow[0];
+
+                const nameCell = row.insertCell(0);
+                nameCell.innerHTML = csvRow[0];
+                nameCell.className = "name-field";
+
+                const timeCell = row.insertCell(1);
+                timeCell.innerHTML = csvRow[1];
+                timeCell.className = "time-field";
             }
         })
         .catch(err => console.error("Fetch error:", err));

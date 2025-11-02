@@ -92,7 +92,7 @@ impl SongDatabase {
         let mut result = Vec::new();
 
         let mut entries = self.songs.iter().map(|s| (s.filename(), s.enabled(), s.was_played())).collect::<Vec<_>>();
-        entries.sort_by(|(f0, ..), (f1, ..)| f0.cmp(f1));
+        entries.sort_unstable_by(|(f0, ..), (f1, ..)| f0.cmp(f1));
 
         for (filename, enabled, was_played) in entries {
             let filename = or_continue!(filename.to_str()).into();

@@ -1,4 +1,7 @@
 # Changelog
+## 0.5.4
+- Added functionality to the 'Events' panel on the web UI
+- Moved some internal functionality
 ## 0.5.3
 - Reworked the randomization code, it should now function as intended
 - Added mutually exclusive command line switches:

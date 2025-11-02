@@ -33,7 +33,8 @@ pub enum Error {
     OutputDeviceConfigCannotBeQueried,
     NoOutputDeviceConfigs,
     CannotSetExitHandler,
-    ProcessInterrupted
+    ProcessInterrupted,
+    EventQueueFileCannotBeRead,
 }
 
 impl std::fmt::Display for Error {
@@ -71,7 +72,8 @@ impl std::fmt::Display for Error {
             Error::OutputDeviceConfigCannotBeQueried => "cannot query output device config",
             Error::NoOutputDeviceConfigs => "no output device configs",
             Error::CannotSetExitHandler => "cannot set exit handler",
-            Error::ProcessInterrupted => "process interrupted"
+            Error::ProcessInterrupted => "process interrupted",
+            Error::EventQueueFileCannotBeRead => "cannot read event queue file",
         })
     }
 }
