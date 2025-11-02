@@ -62,6 +62,8 @@ before inactivating. If zero, the event will never deactivate.\
 Selecting auto deletion will make so that if the event would deactivate, it would instead
 delete itself.
 
+**Note:** Adding any event in the past immediately starts it
+
 ### Note
 See `ENVVARS.md` for accepted compile-time and runtime environment variables
 
