@@ -30,7 +30,6 @@
 - Make `webserver.rs` check whether a new event can be created instead of it
   deleting potentially conflicting events
 - Add event-editing functionality to the web UI
-- Make the MP3 playing functionality accept different sample rate files as well
-  as stereo and mono sounds too, and support more devices
+- Make the MP3 playing functionality support more devices
 # Bugs to be fixed
 - ~~Song randomization seems off~~
