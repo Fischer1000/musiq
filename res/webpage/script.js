@@ -49,6 +49,10 @@ const defaultStrMarker = '"';
 
 const eventCreationOptions = addEventForm.innerHTML;
 
+const eventReplacementButtons =
+    // "<button id=\"trigger-event\">\n" +
+    "<input type=\"submit\" class=\"submit dangerous\" value=\"Remove Event\" id=\"remove-event\">";
+
 // Fetches a url as and returns its text response
 async function fetchText(url) {
     // Bounds checking omitted, I know what I'm doing
@@ -106,8 +110,7 @@ eventListTable.addEventListener('click', function (e) {
     } else {
         selectedEvent = name
 
-        addEventForm.innerHTML =
-            "<input type=\"submit\" class=\"submit dangerous\" value=\"Remove Event\" id=\"remove-event\">";
+        addEventForm.innerHTML = eventReplacementButtons;
     }
 });
 

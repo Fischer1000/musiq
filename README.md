@@ -46,9 +46,23 @@ For mainly debugging reasons, there are some command line switches:
 - `-D` disables all songs
 - `-R` resets the played status of all songs
 
+### The web UI
 Configuring the program as well as adding songs and events can be done using the web UI,
 which can be found on the previously specified webpage.
 
+The other controls are fairly straightforward, so only the event creation is explained.
+
+Creating a new event can be done by naming it and selecting a file for it to play.
+Currently only scheduled events are supported.\
+Select a trigger time for the event then select a repetition interval (in seconds).
+This controls how often the event will be retriggered. If zero, the event will only
+trigger once.\
+Selecting a repetition amount to specify how many times the event must be triggered
+before inactivating. If zero, the event will never deactivate.\
+Selecting auto deletion will make so that if the event would deactivate, it would instead
+delete itself.
+
+### Note
 See `ENVVARS.md` for accepted compile-time and runtime environment variables
 
 ## Note

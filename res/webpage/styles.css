@@ -316,16 +316,16 @@ svg.switched-on rect {
     width: 16ch;
 }
 
-#event-name, #event-trigger-time-holder, #event-repeat-amount-holder {
+#event-name, #event-trigger-time-holder, #event-repeat-amount-holder, #trigger-event {
     margin-right: auto;
 }
 
-#event-sound-label, #autodelete-switch-holder, #remove-event {
+#event-sound-label, #autodelete-switch-holder {
     margin-right: auto;
     margin-left: auto;
 }
 
-#scheduled-switch-holder, #event-repeat-time-holder, #add-event {
+#scheduled-switch-holder, #event-repeat-time-holder, #add-event, #remove-event {
     margin-left: auto;
 }
 

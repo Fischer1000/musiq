@@ -195,7 +195,9 @@ pub fn main<A: ToSocketAddrs, P: AsRef<Path> + Clone + Send + 'static, F: FnMut(
                                     event.name(),
                                     duration_secs
                                 )
-                        )?
+                        )?;
+
+                        logln!("Finished")
                     }
 
                     Ok(())
