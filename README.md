@@ -32,8 +32,10 @@ _Installing from source is advised, because of the sound handling library used, 
 does not like to be ported_
 
 ### Tested environments
-The software is developed on Windows 11 (x86_64) and used on Ubuntu 24 LTS (x86_64), but
-is tested to work on Ubuntu 24 LTS (aarch64)
+The software is developed on Windows 11 (x86_64) and used on Ubuntu 24.04 LTS (x86_64), but
+is tested to work on Ubuntu 24.04 LTS (aarch64).\
+Before using on Linux environments, other components may be required to be installed (usually
+indicated by the compiler)
 
 ## Use
 The program can be started with `./musiq [address:port]`, where the address and
