@@ -35,6 +35,7 @@ pub enum Error {
     CannotSetExitHandler,
     ProcessInterrupted,
     EventQueueFileCannotBeRead,
+    SourceChannelsNotMultipleOfTwo
 }
 
 impl std::fmt::Display for Error {
@@ -74,6 +75,7 @@ impl std::fmt::Display for Error {
             Error::CannotSetExitHandler => "cannot set exit handler",
             Error::ProcessInterrupted => "process interrupted",
             Error::EventQueueFileCannotBeRead => "cannot read event queue file",
+            Error::SourceChannelsNotMultipleOfTwo => "source channels not multiple of two"
         })
     }
 }

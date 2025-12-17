@@ -32,6 +32,7 @@
 - Add event-editing functionality to the web UI
 - Make the MP3 playing functionality support more devices
 - Disabling appropriate song control buttons when no song is selected
+- Move the JS code into Rust/WASM
 # Bugs to be fixed
 - ~~Song randomization seems off~~
 - Auto Dele functionality does not seem to work

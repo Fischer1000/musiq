@@ -20,6 +20,51 @@ use crate::generated::TARGET_VOLUME;
 /// Block a thread while a song is playing with this Mutex
 pub static SONG_PLAYING_GATE: Mutex<()> = Mutex::new(());
 
+/// An iterator that repeats each element a given number of times
+struct Repeater<T: Copy, I: Iterator<Item=T>> {
+    iter: I,
+    next_value: Option<T>,
+    repetitions: usize,
+    current: usize
+}
+
+impl<T: Copy, I: Iterator<Item=T>> Repeater<T, I> {
+    fn new(mut iter: I, repetitions: usize) -> Repeater<T, I> {
+        Self { next_value: iter.next(), iter, repetitions, current: 0 }
+    }
+}
+
+impl<T: Copy, I: Iterator<Item=T>> Iterator for  Repeater<T, I> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current >= self.repetitions {
+            self.next_value = self.iter.next();
+        }
+
+        self.current += 1;
+        self.next_value
+    }
+}
+
+/// An iterator that only returns every nth element
+struct Skipper<T: Copy, I: Iterator<Item=T>> {
+    iter: I,
+    skips: usize
+}
+
+impl<T: Copy, I: Iterator<Item=T>> Skipper<T, I> {
+    fn new(iter: I, skips: usize) -> Skipper<T, I> {
+        Self { iter, skips }
+    }
+}
+
+impl<T: Copy, I: Iterator<Item=T>> Iterator for Skipper<T, I> {
+    type Item = T;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iter.nth(self.skips)
+    }
+}
+
 /// Plays an MP3 file
 /// # Usage
 /// `before_play` is called with `rms`, `scale_factor`, `duration_secs`
@@ -30,27 +75,45 @@ pub fn play_mp3(
 ) -> Result<(), Error> {
     let file = or_return!(std::fs::File::open(&file_path).ok(), Err(Error::CannotReadFile));
     let mut decoder = Decoder::new(BufReader::new(file));
-    let mut samples = Vec::new();
+    let mut samples: Vec<f32> = Vec::new();
+
+    const OUTPUT_CHANNELS: usize = 2;
 
     let mut source_sample_rate = 44100;
     let mut source_channels = 2;
 
+    fn adapt_to_channels(iter: impl Iterator<Item=f32> + Sized + 'static, source_channels: usize, target_channels: usize ) -> Option<Box<dyn Iterator<Item=f32>>> {
+        if source_channels > target_channels {
+            if source_channels % 2 == 0 {
+                let skips = source_channels / target_channels - 1;
+                Some(Box::new(Skipper::new(iter, skips)))
+            } else {
+                None
+            }
+        } else if source_channels == target_channels {
+            Some(Box::new(iter))
+        } else {
+            assert_eq!(source_channels, 1);
+            Some(Box::new(Repeater::new(iter, 2)))
+        }
+    }
+
     while let Ok(Frame { data, sample_rate: sr, channels: ch, .. }) = decoder.next_frame() {
-        samples.extend(data.iter().map(|&s| {
+        samples.extend(adapt_to_channels(data.into_iter().map(|s| {
             s as f32 / i16::MAX as f32
-        }));
+        }), ch, OUTPUT_CHANNELS).ok_or(Error::SourceChannelsNotMultipleOfTwo)?);
         source_sample_rate = sr;
         source_channels = ch;
     }
 
-    let (rms, scale_factor) = normalize_samples(&mut samples, TARGET_VOLUME);
+    let (rms, scale_factor) = normalize_samples(samples.as_mut_slice(), TARGET_VOLUME);
 
-    let duration_secs = samples.len() as f64 / (source_sample_rate as f64 * source_channels as f64);
+    let duration_secs = samples.len() as f64 / (source_sample_rate as f64 * OUTPUT_CHANNELS as f64);
 
     // logln!("Playing \"{}\" ({:.1} seconds, RMS = {rms}, α={scale_factor})", self.filename.display(), duration_secs);
     before_play(rms, scale_factor, duration_secs);
 
-    play_samples(samples.into_boxed_slice(), source_sample_rate as u32, source_channels as u16, device)?;
+    play_samples(samples.into_boxed_slice(), source_sample_rate as u32, OUTPUT_CHANNELS as u16, device)?;
 
     // logln!("Finished");
 
